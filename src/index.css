@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #FDFBF4;
+    color: #0B1F3A;
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+@layer components {
+  .font-serif-heading {
+    font-family: 'Playfair Display', Georgia, serif;
+  }
+  .saffron-gradient {
+    background: linear-gradient(135deg, #F26B21 0%, #D95208 100%);
+  }
+  .govt-badge {
+    background: linear-gradient(135deg, #0B1F3A 0%, #102A43 100%);
+  }
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(11, 31, 58, 0.08);
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.2s ease-out;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #FDFBF4; }
+::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+

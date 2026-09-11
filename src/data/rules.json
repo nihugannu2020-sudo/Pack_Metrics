@@ -1,0 +1,72 @@
+{
+  "act": "Legal Metrology Act, 2009",
+  "rulesSource": "Legal Metrology (Packaged Commodities) Rules, 2011",
+  "declarations": [
+    {
+      "id": "MANUFACTURER_ADDRESS",
+      "legalRef": "Rule 6(1)(a)",
+      "title": "Name & complete address of manufacturer / packer / importer",
+      "required": true,
+      "detectionHint": "Look for a prefix like 'Mfd by / Manufactured by / Marketed by / Packed by / Imported by' plus a 6-digit Indian PIN code nearby as a proxy for a full address.",
+      "regexHints": ["(mfd|manufactured|marketed|packed|imported)\\s+by", "\\b\\d{6}\\b"]
+    },
+    {
+      "id": "COMMODITY_NAME",
+      "legalRef": "Rule 6(1)(b)",
+      "title": "Common or generic name of the commodity",
+      "required": true,
+      "detectionHint": "Best-effort only: treat the largest/first prominent text block as the product name. Mark 'Manual review' rather than hard-failing when uncertain — this is inherently fuzzy.",
+      "regexHints": []
+    },
+    {
+      "id": "NET_QUANTITY",
+      "legalRef": "Rule 6(1)(c) & Rule 5",
+      "title": "Net quantity in standard units (weight / volume / number)",
+      "required": true,
+      "detectionHint": "A number immediately followed by a standard unit.",
+      "regexHints": ["\\d+(\\.\\d+)?\\s?(g|gm|grams?|kg|kilograms?|ml|millilitres?|milliliters?|l|litres?|liters?|nos?|pieces?|units?)\\b"]
+    },
+    {
+      "id": "MRP",
+      "legalRef": "Rule 6(1)(e) & Section 18(2) of the Act",
+      "title": "Maximum Retail Price, inclusive of all taxes, to 2 decimal places",
+      "required": true,
+      "detectionHint": "Currency symbol/keyword followed by a number. Also soft-check for the phrase 'inclusive of all taxes' nearby (warn, don't hard-fail, if missing).",
+      "regexHints": ["(₹|rs\\.?|inr|mrp)\\s?[:\\-]?\\s?\\d+(\\.\\d{1,2})?"],
+      "softCheckPhrase": "inclusive of all taxes"
+    },
+    {
+      "id": "MFG_DATE",
+      "legalRef": "Rule 6(1)(d)",
+      "title": "Month & year of manufacture / packing / import",
+      "required": true,
+      "exemptions": ["bidi", "incense sticks", "domestic LPG cylinders (14.2kg or 5kg)"],
+      "regexHints": ["(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*[\\s\\-/]?\\d{2,4}", "\\b(0[1-9]|1[0-2])[\\/\\-]\\d{2,4}\\b"]
+    },
+    {
+      "id": "CONSUMER_CARE",
+      "legalRef": "Rule 6(1)(f)",
+      "title": "Name, address, phone & email for consumer grievances",
+      "required": true,
+      "regexHints": ["\\b(?:\\+91[\\-\\s]?)?[6-9]\\d{9}\\b", "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}"]
+    },
+    {
+      "id": "COUNTRY_OF_ORIGIN",
+      "legalRef": "Rule 6(1) — import-specific declarations",
+      "title": "Country of origin / assembly (imported goods only)",
+      "required": "conditionalOnImportFlag",
+      "regexHints": ["country of origin", "made in", "product of"]
+    }
+  ],
+  "fontHeightTable_WeightOrVolume_mm": [
+    { "netQuantity": "Up to 200 g/ml", "normal": 1, "moldedOrBlown": 2 },
+    { "netQuantity": "Above 200 g/ml up to 500 g/ml", "normal": 2, "moldedOrBlown": 4 },
+    { "netQuantity": "Above 500 g/ml", "normal": 4, "moldedOrBlown": 6 }
+  ],
+  "fontHeightTable_AreaOfPDP_mm": [
+    { "pdpArea": "Up to 100 cm²", "normal": 1, "moldedOrBlown": 2 },
+    { "pdpArea": "Above 100 up to 500 cm²", "normal": 2, "moldedOrBlown": 4 },
+    { "pdpArea": "Above 500 up to 2500 cm²", "normal": 4, "moldedOrBlown": 6 },
+    { "pdpArea": "Above 2500 cm²", "normal": 6, "moldedOrBlown": 6 }
+  ]
+}
