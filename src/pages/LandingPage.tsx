@@ -43,20 +43,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchDemo, onSelect
   return (
     <div className="min-h-screen bg-cream flex flex-col">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-navy-900 text-white pt-16 pb-20 px-4 sm:px-6 lg:px-8 border-b-4 border-saffron">
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#F26B21_1px,transparent_1px)] [background-size:16px_16px]"></div>
+      <section className="relative overflow-hidden bg-white text-navy-900 pt-16 pb-20 px-4 sm:px-6 lg:px-8 border-b border-slate-200">
         
         <div className="max-w-6xl mx-auto relative z-10 text-center">
-          <div className="inline-flex items-center gap-2 bg-saffron/20 border border-saffron/40 px-3.5 py-1.5 rounded-full text-saffron text-xs font-bold tracking-wide uppercase mb-6">
+          <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-100 px-3.5 py-1.5 rounded-full text-blue-700 text-xs font-semibold mb-6">
             <Zap className="w-3.5 h-3.5" />
             Legal Metrology Act 2009 & PCR Rules 2011 Automated Verification
           </div>
 
-          <h1 className="font-serif-heading text-4xl sm:text-6xl font-extrabold tracking-tight text-white max-w-4xl mx-auto leading-tight">
+          <h1 className="font-serif-heading text-4xl sm:text-6xl font-extrabold tracking-tight text-navy-900 max-w-4xl mx-auto leading-tight">
             AI-powered Legal Metrology compliance, <span className="text-saffron">in seconds.</span>
           </h1>
 
-          <p className="mt-6 text-lg sm:text-xl text-slate-300 max-w-2xl mx-auto font-light leading-relaxed">
+          <p className="mt-6 text-lg sm:text-xl text-slate-600 max-w-2xl mx-auto font-light leading-relaxed">
             Instant in-browser OCR, AST-style statutory rule verification, visual bounding-box evidence mapping, and automated legal notice generation.
           </p>
 
@@ -70,29 +69,29 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchDemo, onSelect
             </button>
             <button
               onClick={() => onSelectRole('admin')}
-              className="w-full sm:w-auto px-6 py-4 bg-navy-800 text-slate-200 border border-navy-700 font-semibold text-base rounded-xl hover:bg-navy-700 transition"
+              className="w-full sm:w-auto px-6 py-4 bg-white text-slate-700 border border-slate-300 font-semibold text-base rounded-xl hover:bg-slate-50 transition"
             >
               Explore Executive Analytics
             </button>
           </div>
 
           {/* Quick Metrics Bar */}
-          <div className="mt-14 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto bg-navy-950/60 p-4 rounded-2xl border border-navy-800 backdrop-blur">
+          <div className="mt-14 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto bg-slate-50 p-4 rounded-2xl border border-slate-200">
             <div className="p-3 text-center border-r border-navy-800 last:border-0">
               <span className="block text-2xl font-bold text-saffron font-serif-heading">7 Statutory</span>
               <span className="text-xs text-slate-400">Rule 6 Declarations</span>
             </div>
             <div className="p-3 text-center border-r border-navy-800 last:border-0">
-              <span className="block text-2xl font-bold text-white font-serif-heading">&lt; 3 Seconds</span>
-              <span className="text-xs text-slate-400">OCR & Rule Check Time</span>
+              <span className="block text-2xl font-bold text-navy-900 font-serif-heading">&lt; 3 Seconds</span>
+              <span className="text-xs text-slate-500">OCR & Rule Check Time</span>
             </div>
             <div className="p-3 text-center border-r border-navy-800 last:border-0">
               <span className="block text-2xl font-bold text-emerald-400 font-serif-heading">100% Client-Side</span>
-              <span className="text-xs text-slate-400">Zero API Key / Server</span>
+              <span className="text-xs text-slate-500">Zero API Key / Server</span>
             </div>
             <div className="p-3 text-center">
               <span className="block text-2xl font-bold text-saffron font-serif-heading">PDF Notice</span>
-              <span className="text-xs text-slate-400">Section 36(1) Draft</span>
+              <span className="text-xs text-slate-500">Section 36(1) Draft</span>
             </div>
           </div>
         </div>

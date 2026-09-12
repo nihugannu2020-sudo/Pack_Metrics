@@ -130,7 +130,7 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Officer Welcome Banner */}
-      <div className="bg-navy-900 text-white rounded-2xl p-6 shadow-lg border border-navy-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white text-navy-900 rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-saffron animate-pulse"></span>
@@ -142,7 +142,7 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
         </div>
 
         <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 bg-navy-800 border border-navy-700 px-3.5 py-2 rounded-xl text-xs text-slate-200 cursor-pointer select-none">
+          <label className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-xl text-xs text-slate-700 cursor-pointer select-none">
             <input
               type="checkbox"
               checked={isImported}
@@ -368,22 +368,13 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
                                 <h5 className="font-bold text-navy-900 text-xs">{result.title}</h5>
                               </div>
                               
-                              {result.matchedText && (
-                                <p className="text-xs text-slate-700 mt-1">
-                                  <strong>Matched Text:</strong> <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded">{result.matchedText}</span>
-                                </p>
-                              )}
-
-                              {result.warning && (
-                                <p className="text-[11px] text-amber-700 font-medium mt-1">
-                                  ⚠️ {result.warning}
-                                </p>
-                              )}
-
-                              {result.guidanceNote && (
-                                <p className="text-[11px] text-slate-500 mt-1 italic">
-                                  ℹ️ {result.guidanceNote}
-                                </p>
+                              {(result.matchedText || result.warning || result.guidanceNote) && (
+                                <details className="mt-2 text-[11px] text-slate-600">
+                                  <summary className="cursor-pointer font-semibold text-slate-500">View evidence and guidance</summary>
+                                  {result.matchedText && <p className="mt-2"><strong>Matched text:</strong> <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded">{result.matchedText}</span></p>}
+                                  {result.warning && <p className="mt-1 text-amber-700">{result.warning}</p>}
+                                  {result.guidanceNote && <p className="mt-1 italic">{result.guidanceNote}</p>}
+                                </details>
                               )}
                             </div>
                           </div>

@@ -35,29 +35,26 @@ export const Navbar: React.FC<NavbarProps> = ({
   const visibleNavItems = navItems.filter(item => item.role === 'all' || item.role === currentRole);
 
   return (
-    <header className="bg-navy-900 text-white sticky top-0 z-40 shadow-md border-b border-navy-800">
+    <header className="bg-white text-navy-900 sticky top-0 z-40 border-b border-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between min-h-16 py-3 gap-4">
           {/* Brand Logo & Govt Header */}
           <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab('landing')}>
-            <div className="w-10 h-10 saffron-gradient rounded-lg flex items-center justify-center shadow-lg border border-saffron-500">
-              <ShieldCheck className="w-6 h-6 text-white" />
+            <div className="w-9 h-9 bg-slate-100 rounded-lg flex items-center justify-center border border-slate-200">
+              <ShieldCheck className="w-5 h-5 text-saffron" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-serif-heading font-bold text-xl tracking-tight text-white">PackMetrics</span>
-                <span className="text-[10px] bg-saffron/20 text-saffron-100 border border-saffron/40 font-semibold px-1.5 py-0.5 rounded">
-                  PROTOTYPE
-                </span>
+                <span className="font-bold text-lg tracking-tight text-navy-900">PackMetrics</span>
               </div>
-              <p className="text-[11px] text-slate-300 font-light hidden sm:block">
-                Legal Metrology Compliance System • Govt of India
+              <p className="text-[11px] text-slate-500 hidden sm:block">
+                Compliance workspace
               </p>
             </div>
           </div>
 
           {/* Navigation Links */}
-          <nav className="hidden md:flex space-x-1">
+            <nav className="hidden md:flex space-x-1 ml-auto mr-4">
             {visibleNavItems.map(item => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -67,8 +64,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                   onClick={() => setActiveTab(item.id)}
                   className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
                     isActive
-                      ? 'bg-saffron text-white shadow'
-                      : 'text-slate-200 hover:bg-navy-800 hover:text-white'
+                      ? 'bg-blue-50 text-blue-700'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -81,21 +78,21 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* User Role Badge & Switcher */}
           <div className="flex items-center space-x-3">
             <div className="hidden lg:flex flex-col items-end text-right">
-              <span className="text-xs font-semibold text-white flex items-center gap-1.5">
+              <span className="text-xs font-semibold text-navy-900 flex items-center gap-1.5">
                 <User className="w-3.5 h-3.5 text-saffron" />
                 {userName}
               </span>
-              <span className="text-[10px] text-slate-300">{currentBadge.text}</span>
+              <span className="text-[10px] text-slate-500">{currentBadge.text}</span>
             </div>
 
-            <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${currentBadge.bg} shadow-sm`}>
+            <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">
               {currentBadge.label}
             </span>
 
             <button
               onClick={onOpenRolePicker}
               title="Switch Persona / Role"
-              className="flex items-center gap-1 text-xs bg-navy-800 hover:bg-navy-700 text-slate-200 border border-navy-700 px-2.5 py-1.5 rounded-lg transition"
+              className="flex items-center gap-1 text-xs bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-2.5 py-1.5 rounded-lg transition"
             >
               <RefreshCw className="w-3.5 h-3.5 text-saffron" />
               <span className="hidden sm:inline">Switch Role</span>
@@ -105,7 +102,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       {/* Mobile Nav Bar */}
-      <div className="md:hidden bg-navy-950 border-t border-navy-800 px-2 py-1.5 flex justify-around">
+      <div className="md:hidden bg-white border-t border-slate-200 px-2 py-1.5 flex justify-around">
         {visibleNavItems.map(item => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -114,7 +111,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               key={item.id}
               onClick={() => setActiveTab(item.id)}
               className={`flex flex-col items-center py-1 px-2 rounded text-[10px] ${
-                isActive ? 'text-saffron font-bold' : 'text-slate-400'
+                isActive ? 'text-blue-700 font-semibold' : 'text-slate-500'
               }`}
             >
               <Icon className="w-4 h-4 mb-0.5" />

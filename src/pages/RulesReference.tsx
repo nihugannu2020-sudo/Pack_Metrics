@@ -17,7 +17,7 @@ export const RulesReference: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Header */}
-      <div className="bg-navy-900 text-white rounded-2xl p-6 shadow-lg border border-navy-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white text-navy-900 rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <BookOpen className="w-6 h-6 text-saffron" />
