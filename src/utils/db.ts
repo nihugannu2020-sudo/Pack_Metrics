@@ -188,6 +188,15 @@ export const DB = {
     localStorage.setItem(STORAGE_KEYS.SCANS, JSON.stringify(updated));
   },
 
+  updateScanReview(
+    scanId: string,
+    review: Pick<ComplianceReport, 'reviewStatus' | 'reviewedBy' | 'reviewedAt' | 'reviewNote'>
+  ): void {
+    const scans = this.getScans();
+    const updated = scans.map(scan => (scan.id === scanId ? { ...scan, ...review } : scan));
+    localStorage.setItem(STORAGE_KEYS.SCANS, JSON.stringify(updated));
+  },
+
   getNotices(): LegalNotice[] {
     const raw = localStorage.getItem(STORAGE_KEYS.NOTICES);
     if (!raw) {

@@ -51,6 +51,12 @@ export interface ComplianceReport {
   failCount: number;
   reviewCount: number;
   overallStatus: 'Compliant' | 'Non-Compliant' | 'Needs Review';
+  submittedBy?: string;
+  submittedByRole?: UserRole;
+  reviewStatus?: 'draft' | 'submitted' | 'approved' | 'rejected';
+  reviewedBy?: string;
+  reviewedAt?: string;
+  reviewNote?: string;
 }
 
 export interface LegalNotice {

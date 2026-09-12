@@ -4,9 +4,9 @@ import { DB } from './utils/db';
 import { Navbar } from './components/Navbar';
 import { RolePickerModal } from './components/RolePickerModal';
 import { LandingPage } from './pages/LandingPage';
-import { InspectorDashboard } from './pages/InspectorDashboard';
-import { ManufacturerDashboard } from './pages/ManufacturerDashboard';
-import { AdminDashboard } from './pages/AdminDashboard';
+import { InspectorDashboard } from './components/dashboards/InspectorDashboard';
+import { ManufacturerDashboard } from './components/dashboards/ManufacturerDashboard';
+import { AdminDashboard } from './components/dashboards/AdminDashboard';
 import { RulesReference } from './pages/RulesReference';
 
 export function App() {
@@ -32,6 +32,10 @@ export function App() {
     else if (role === 'admin') setActiveTab('admin');
   };
 
+  const authorizedTab = activeTab === 'landing' || activeTab === 'rules' || activeTab === currentRole
+    ? activeTab
+    : currentRole;
+
   return (
     <div className="min-h-screen bg-cream text-navy-900 flex flex-col font-sans">
       {/* Top Navbar */}
@@ -45,20 +49,20 @@ export function App() {
 
       {/* Page Routing */}
       <main className="flex-1">
-        {activeTab === 'landing' && (
+        {authorizedTab === 'landing' && (
           <LandingPage
             onLaunchDemo={() => setActiveTab('inspector')}
             onSelectRole={(r) => handleSelectRole(r, userName)}
           />
         )}
 
-        {activeTab === 'inspector' && <InspectorDashboard officerName={userName} />}
+        {authorizedTab === 'inspector' && currentRole === 'inspector' && <InspectorDashboard officerName={userName} />}
 
-        {activeTab === 'manufacturer' && <ManufacturerDashboard userName={userName} />}
+        {authorizedTab === 'manufacturer' && currentRole === 'manufacturer' && <ManufacturerDashboard userName={userName} />}
 
-        {activeTab === 'admin' && <AdminDashboard />}
+        {authorizedTab === 'admin' && currentRole === 'admin' && <AdminDashboard />}
 
-        {activeTab === 'rules' && <RulesReference />}
+        {authorizedTab === 'rules' && <RulesReference />}
       </main>
 
       {/* Role Switcher Modal */}

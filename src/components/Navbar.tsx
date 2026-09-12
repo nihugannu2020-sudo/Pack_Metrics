@@ -25,12 +25,14 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const currentBadge = roleBadges[currentRole];
 
-  const navItems = [
+  const navItems: { id: string; label: string; icon: typeof ShieldCheck; role: UserRole | 'all' }[] = [
     { id: 'inspector', label: 'Inspector Scan', icon: ShieldCheck, role: 'inspector' },
     { id: 'manufacturer', label: 'Manufacturer Portal', icon: UserCheck, role: 'manufacturer' },
     { id: 'admin', label: 'Admin Analytics', icon: BarChart3, role: 'admin' },
     { id: 'rules', label: 'Rules Reference', icon: BookOpen, role: 'all' },
   ];
+
+  const visibleNavItems = navItems.filter(item => item.role === 'all' || item.role === currentRole);
 
   return (
     <header className="bg-navy-900 text-white sticky top-0 z-40 shadow-md border-b border-navy-800">
@@ -56,7 +58,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Navigation Links */}
           <nav className="hidden md:flex space-x-1">
-            {navItems.map(item => {
+            {visibleNavItems.map(item => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
               return (
@@ -104,7 +106,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Mobile Nav Bar */}
       <div className="md:hidden bg-navy-950 border-t border-navy-800 px-2 py-1.5 flex justify-around">
-        {navItems.map(item => {
+        {visibleNavItems.map(item => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
           return (

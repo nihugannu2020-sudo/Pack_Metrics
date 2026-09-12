@@ -6,7 +6,7 @@ import { validateRuleEngine } from '../utils/ruleEngine';
 import { BoundingBoxCanvas } from '../components/BoundingBoxCanvas';
 import { NoticeModal } from '../components/NoticeModal';
 import { DB } from '../utils/db';
-import { Upload, CheckCircle2, XCircle, AlertTriangle, FileText, Eye, Info, Sparkles, Filter } from 'lucide-react';
+import { Upload, CheckCircle2, XCircle, AlertTriangle, FileText, Eye, Info, Sparkles, Filter, ClipboardCheck } from 'lucide-react';
 
 interface InspectorDashboardProps {
   officerName: string;
@@ -23,6 +23,7 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
   const [ocrStatusText, setOcrStatusText] = useState<string>('');
   
   const [scanHistory, setScanHistory] = useState<ComplianceReport[]>([]);
+  const [submittedReports, setSubmittedReports] = useState<ComplianceReport[]>([]);
   const [isNoticeModalOpen, setIsNoticeModalOpen] = useState<boolean>(false);
   const [customFilePreview, setCustomFilePreview] = useState<string | null>(null);
 
@@ -30,6 +31,7 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
   useEffect(() => {
     const history = DB.getScans();
     setScanHistory(history);
+    setSubmittedReports(history.filter(scan => scan.reviewStatus === 'submitted'));
     // Auto-run first sample preset so inspector dashboard isn't empty on load
     runPresetScan(SAMPLE_PRESETS[0]);
   }, []);
@@ -110,6 +112,19 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
 
   const handleSaveNotice = (notice: LegalNotice) => {
     DB.saveNotice(notice);
+  };
+
+  const reviewManufacturerReport = (report: ComplianceReport, reviewStatus: 'approved' | 'rejected') => {
+    DB.updateScanReview(report.id, {
+      reviewStatus,
+      reviewedBy: officerName,
+      reviewedAt: new Date().toISOString(),
+      reviewNote: reviewStatus === 'approved' ? 'Approved by field inspector.' : 'Rejected for additional manufacturer review.',
+    });
+    const updatedScans = DB.getScans();
+    setScanHistory(updatedScans);
+    setSubmittedReports(updatedScans.filter(scan => scan.reviewStatus === 'submitted'));
+    setCurrentReport({ ...report, reviewStatus, reviewedBy: officerName });
   };
 
   return (
@@ -402,6 +417,48 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
           )}
         </div>
       </div>
+
+      {/* Manufacturer Submission Review Queue */}
+      {submittedReports.length > 0 && (
+        <div className="bg-white p-6 rounded-2xl border border-amber-200 shadow-sm space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="font-bold font-serif-heading text-navy-900 text-lg flex items-center gap-2">
+                <ClipboardCheck className="w-5 h-5 text-saffron" />
+                Manufacturer Reports Awaiting Approval
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">Review self-audit evidence before accepting it into the inspection record.</p>
+            </div>
+            <span className="text-xs font-bold text-amber-800 bg-amber-100 px-2.5 py-1 rounded-full">{submittedReports.length} Pending</span>
+          </div>
+
+          <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
+            {submittedReports.map(report => (
+              <div key={report.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-bold text-navy-900">{report.id}</span>
+                    <span className="text-[10px] text-slate-500">Submitted by {report.submittedBy || 'Manufacturer'}</span>
+                  </div>
+                  <h4 className="font-bold text-sm text-navy-900 mt-1">{report.productName || 'Package label report'}</h4>
+                  <p className="text-xs text-slate-600">{report.manufacturerName} • {report.passCount} pass / {report.failCount} fail / {report.reviewCount} review</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setCurrentReport(report)} className="px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-navy-900 hover:bg-slate-50 flex items-center gap-1.5">
+                    <Eye className="w-3.5 h-3.5" /> View
+                  </button>
+                  <button onClick={() => reviewManufacturerReport(report, 'rejected')} className="px-3 py-2 rounded-lg bg-red-100 text-red-800 text-xs font-bold hover:bg-red-200 flex items-center gap-1.5">
+                    <XCircle className="w-3.5 h-3.5" /> Reject
+                  </button>
+                  <button onClick={() => reviewManufacturerReport(report, 'approved')} className="px-3 py-2 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-bold hover:bg-emerald-200 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Approve
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Historical Scans Table */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
