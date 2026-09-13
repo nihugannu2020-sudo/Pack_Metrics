@@ -1,15 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import type { ComplianceReport, LegalNotice } from '../types';
 import { DB } from '../utils/db';
+import { performOCR } from '../utils/ocr';
+import { validateRuleEngine } from '../utils/ruleEngine';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell
 } from 'recharts';
-import { BarChart3, ShieldCheck, AlertTriangle, FileText, TrendingDown, Scale, Lock, Award, Activity, Eye } from 'lucide-react';
+import { BarChart3, ShieldCheck, AlertTriangle, FileText, TrendingDown, Scale, Lock, Award, Activity, Eye, ScanLine } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
   const [scans, setScans] = useState<ComplianceReport[]>([]);
   const [notices, setNotices] = useState<LegalNotice[]>([]);
   const [selectedReport, setSelectedReport] = useState<ComplianceReport | null>(null);
+  const [scannedReport, setScannedReport] = useState<ComplianceReport | null>(null);
+  const [isScanningReport, setIsScanningReport] = useState(false);
+  const [scanStatus, setScanStatus] = useState('');
+  const [scanProgress, setScanProgress] = useState(0);
 
   useEffect(() => {
     setScans(DB.getScans());
@@ -20,6 +26,50 @@ export const AdminDashboard: React.FC = () => {
   const officerReports = scans.filter(scan => scan.submittedByRole !== 'manufacturer');
   const compliantScans = scans.filter(s => s.overallStatus === 'Compliant').length;
   const complianceRate = totalScans > 0 ? Math.round((compliantScans / totalScans) * 100) : 0;
+
+  const scanAttachedReport = async (report: ComplianceReport) => {
+    const imageUrls = report.imageUrls?.length ? report.imageUrls : report.imageUrl ? [report.imageUrl] : [];
+    if (imageUrls.length === 0) return;
+
+    setIsScanningReport(true);
+    setScanProgress(0);
+    setScanStatus('Starting executive image scan...');
+    try {
+      const ocrResults = [];
+      for (let index = 0; index < imageUrls.length; index += 1) {
+        const result = await performOCR(imageUrls[index], undefined, (progress, status) => {
+          setScanProgress(Math.round(((index + progress / 100) / imageUrls.length) * 100));
+          setScanStatus(`Scanning image ${index + 1} of ${imageUrls.length}: ${status}`);
+        });
+        ocrResults.push(result);
+      }
+
+      const rescannedReport = validateRuleEngine(
+        ocrResults.map(result => result.text).join('\n'),
+        ocrResults[0]?.words || [],
+        { isImported: report.isImported, imageUrl: imageUrls[0], imageDimensions: report.imageDimensions }
+      );
+      const updatedReport: ComplianceReport = {
+        ...rescannedReport,
+        id: report.id,
+        timestamp: report.timestamp,
+        productName: report.productName,
+        manufacturerName: report.manufacturerName,
+        submittedBy: report.submittedBy,
+        submittedByRole: report.submittedByRole,
+        reviewStatus: report.reviewStatus,
+        imageUrls,
+      };
+      setScannedReport(updatedReport);
+      setScanProgress(100);
+      setScanStatus('Executive scan complete');
+    } catch (error) {
+      console.error('Executive report scan error:', error);
+      setScanStatus('Unable to scan the attached image');
+    } finally {
+      setIsScanningReport(false);
+    }
+  };
 
   // Calculate violation counts by rule
   const ruleViolationCounts: Record<string, { label: string; count: number }> = {
@@ -284,7 +334,7 @@ export const AdminDashboard: React.FC = () => {
                       <p className="text-xs font-semibold text-slate-700 mt-1">{report.failCount} violations • {report.reviewStatus || 'submitted'}</p>
                     </div>
                     <button
-                      onClick={() => setSelectedReport(report)}
+                      onClick={() => { setSelectedReport(report); setScannedReport(null); setScanStatus(''); }}
                       className="px-3 py-2 rounded-lg bg-navy-900 text-white text-xs font-bold hover:bg-navy-800 transition flex items-center gap-1.5"
                     >
                       <Eye className="w-3.5 h-3.5" />
@@ -308,13 +358,30 @@ export const AdminDashboard: React.FC = () => {
                 <p className="text-xs text-slate-600 mt-1">{selectedReport.manufacturerName} • Submitted by {selectedReport.submittedBy || 'Field Inspector'}</p>
               </div>
               <button
-                onClick={() => setSelectedReport(null)}
+                onClick={() => { setSelectedReport(null); setScannedReport(null); }}
                 className="text-slate-400 hover:text-slate-700 text-xl leading-none"
                 aria-label="Close report"
               >
                 ×
               </button>
             </div>
+
+            <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
+              <button
+                onClick={() => scanAttachedReport(selectedReport)}
+                disabled={isScanningReport || !(selectedReport.imageUrls?.length || selectedReport.imageUrl)}
+                className="px-4 py-2 rounded-lg bg-saffron text-white text-xs font-bold hover:bg-saffron-600 disabled:bg-slate-200 disabled:text-slate-500 transition flex items-center justify-center gap-2"
+              >
+                <ScanLine className="w-4 h-4" />
+                {isScanningReport ? 'Scanning attached image...' : 'Scan attached image'}
+              </button>
+              {scanStatus && <span className="text-xs text-slate-500">{scanStatus}</span>}
+            </div>
+            {isScanningReport && (
+              <div className="mt-3 h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full bg-saffron transition-all" style={{ width: `${scanProgress}%` }} />
+              </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-5">
               <div>
@@ -340,7 +407,7 @@ export const AdminDashboard: React.FC = () => {
               <div>
                 <h4 className="text-xs font-bold text-navy-900 uppercase tracking-wider mb-2">Compliance report</h4>
                 <div className="space-y-2 border border-slate-200 rounded-xl overflow-hidden">
-                  {selectedReport.results.map(result => (
+                  {(scannedReport || selectedReport).results.map(result => (
                     <div key={result.ruleId} className="p-3 border-b last:border-b-0 border-slate-100">
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-xs font-semibold text-navy-900">{result.title}</span>
@@ -358,7 +425,7 @@ export const AdminDashboard: React.FC = () => {
             <div className="mt-5">
               <h4 className="text-xs font-bold text-navy-900 uppercase tracking-wider mb-2">Extracted OCR text</h4>
               <pre className="p-3 bg-slate-900 text-emerald-400 rounded-xl text-[11px] font-mono whitespace-pre-wrap max-h-40 overflow-y-auto">
-                {selectedReport.extractedText || 'No OCR text extracted.'}
+                {(scannedReport || selectedReport).extractedText || 'No OCR text extracted.'}
               </pre>
             </div>
           </div>
