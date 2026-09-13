@@ -7,6 +7,17 @@ const STORAGE_KEYS = {
   USER_NAME: 'packmetrics_user_name_v1',
 };
 
+const REMOVED_DEMO_SCAN_IDS = new Set(['SCAN-1789318422504-776']);
+const REMOVED_DEMO_NOTICE_NUMBERS = new Set(['PM-546175', 'PM-682495']);
+
+function isNoisyOcrScan(scan: ComplianceReport): boolean {
+  const productName = scan.productName.trim().toLowerCase();
+  const manufacturerName = scan.manufacturerName.trim().toLowerCase();
+  return productName.includes('re tite')
+    || productName === '== | b®'
+    || manufacturerName === 'detected manufacturer';
+}
+
 // Seed historical scan data for rich demo metrics
 const INITIAL_SEED_SCANS: ComplianceReport[] = [
   {
@@ -176,7 +187,12 @@ export const DB = {
       return INITIAL_SEED_SCANS;
     }
     try {
-      return JSON.parse(raw);
+      const scans = JSON.parse(raw) as ComplianceReport[];
+      const filteredScans = scans.filter(scan => !REMOVED_DEMO_SCAN_IDS.has(scan.id) && !isNoisyOcrScan(scan));
+      if (filteredScans.length !== scans.length) {
+        localStorage.setItem(STORAGE_KEYS.SCANS, JSON.stringify(filteredScans));
+      }
+      return filteredScans;
     } catch {
       return INITIAL_SEED_SCANS;
     }
@@ -204,7 +220,12 @@ export const DB = {
       return INITIAL_SEED_NOTICES;
     }
     try {
-      return JSON.parse(raw);
+      const notices = JSON.parse(raw) as LegalNotice[];
+      const filteredNotices = notices.filter(notice => !REMOVED_DEMO_NOTICE_NUMBERS.has(notice.noticeNumber));
+      if (filteredNotices.length !== notices.length) {
+        localStorage.setItem(STORAGE_KEYS.NOTICES, JSON.stringify(filteredNotices));
+      }
+      return filteredNotices;
     } catch {
       return INITIAL_SEED_NOTICES;
     }

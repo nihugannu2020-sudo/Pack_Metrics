@@ -15,16 +15,31 @@ export function App() {
   const [activeTab, setActiveTab] = useState<string>('landing');
   const [isRoleModalOpen, setIsRoleModalOpen] = useState<boolean>(false);
 
+  const defaultNames: Record<UserRole, string> = {
+    inspector: 'Inspector Rajesh Kumar',
+    manufacturer: 'Apex Foods Quality Mgr',
+    admin: 'Officer V. Sharma',
+  };
+
+  const resolveRoleName = (role: UserRole, name: string): string => {
+    const knownDefaultNames = Object.values(defaultNames);
+    return name.trim() && !knownDefaultNames.includes(name.trim()) ? name.trim() : defaultNames[role];
+  };
+
   useEffect(() => {
-    setCurrentRole(DB.getUserRole());
-    setUserName(DB.getUserName());
+    const role = DB.getUserRole();
+    const name = resolveRoleName(role, DB.getUserName());
+    setCurrentRole(role);
+    setUserName(name);
+    DB.setUserName(name);
   }, []);
 
   const handleSelectRole = (role: UserRole, name: string) => {
+    const resolvedName = resolveRoleName(role, name);
     setCurrentRole(role);
-    setUserName(name);
+    setUserName(resolvedName);
     DB.setUserRole(role);
-    DB.setUserName(name);
+    DB.setUserName(resolvedName);
 
     // Auto navigate to corresponding dashboard
     if (role === 'inspector') setActiveTab('inspector');

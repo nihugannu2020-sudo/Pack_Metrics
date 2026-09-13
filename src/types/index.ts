@@ -43,6 +43,7 @@ export interface ComplianceReport {
   manufacturerName: string;
   isImported: boolean;
   imageUrl: string;
+  imageUrls?: string[];
   imageDimensions?: { width: number; height: number };
   extractedText: string;
   words: OCRWord[];

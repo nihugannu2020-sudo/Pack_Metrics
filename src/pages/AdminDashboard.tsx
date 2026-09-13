@@ -4,11 +4,12 @@ import { DB } from '../utils/db';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell
 } from 'recharts';
-import { BarChart3, ShieldCheck, AlertTriangle, FileText, TrendingDown, Scale, Lock, Award, Activity } from 'lucide-react';
+import { BarChart3, ShieldCheck, AlertTriangle, FileText, TrendingDown, Scale, Lock, Award, Activity, Eye } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
   const [scans, setScans] = useState<ComplianceReport[]>([]);
   const [notices, setNotices] = useState<LegalNotice[]>([]);
+  const [selectedReport, setSelectedReport] = useState<ComplianceReport | null>(null);
 
   useEffect(() => {
     setScans(DB.getScans());
@@ -16,6 +17,7 @@ export const AdminDashboard: React.FC = () => {
   }, []);
 
   const totalScans = scans.length;
+  const officerReports = scans.filter(scan => scan.submittedByRole !== 'manufacturer');
   const compliantScans = scans.filter(s => s.overallStatus === 'Compliant').length;
   const complianceRate = totalScans > 0 ? Math.round((compliantScans / totalScans) * 100) : 0;
 
@@ -192,6 +194,176 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-bold font-serif-heading text-navy-900 text-lg flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-violation" />
+              <span>All Complaints Raised by Field Inspectors</span>
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Central view of every inspector-generated complaint and its affected manufacturer.
+            </p>
+          </div>
+          <span className="text-xs text-slate-500 font-mono">{notices.length} Complaints Recorded</span>
+        </div>
+
+        {notices.length === 0 ? (
+          <div className="p-8 text-center bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500">
+            No complaints have been raised by field inspectors.
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
+            {notices.map(notice => (
+              <div key={notice.id} className="p-4 bg-white hover:bg-slate-50/80 transition space-y-2">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-bold text-xs bg-navy-900 text-white px-2 py-0.5 rounded">
+                      {notice.noticeNumber}
+                    </span>
+                    <span className="text-xs text-slate-500">Raised {notice.date} by {notice.issuedBy}</span>
+                  </div>
+                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${notice.status === 'Open' ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                    {notice.status}
+                  </span>
+                </div>
+                <div>
+                  <h4 className="font-bold text-navy-900 text-sm">{notice.productName}</h4>
+                  <p className="text-xs text-slate-600">{notice.manufacturerName} — {notice.manufacturerAddress}</p>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {notice.violations.map((violation, index) => (
+                    <span key={index} className="text-[10px] bg-red-100 text-red-900 px-2 py-0.5 rounded font-semibold border border-red-200">
+                      {violation.legalRef}: {violation.title}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-bold font-serif-heading text-navy-900 text-lg flex items-center gap-2">
+              <FileText className="w-5 h-5 text-saffron" />
+              <span>Reports Submitted by Field Inspectors</span>
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Inspection reports submitted by officers for executive review.
+            </p>
+          </div>
+          <span className="text-xs text-slate-500 font-mono">{officerReports.length} Reports Recorded</span>
+        </div>
+
+        {officerReports.length === 0 ? (
+          <div className="p-8 text-center bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500">
+            No officer reports have been submitted.
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
+            {officerReports.map(report => (
+              <div key={report.id} className="p-4 bg-white hover:bg-slate-50/80 transition">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs text-slate-500">{report.id}</span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${report.overallStatus === 'Compliant' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
+                        {report.overallStatus}
+                      </span>
+                    </div>
+                    <h4 className="font-bold text-navy-900 text-sm mt-1">{report.productName || 'Unnamed product'}</h4>
+                    <p className="text-xs text-slate-600">{report.manufacturerName} • Submitted by {report.submittedBy || 'Field Inspector'}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="text-left md:text-right">
+                      <p className="text-xs text-slate-500">{new Date(report.timestamp).toLocaleDateString('en-IN')}</p>
+                      <p className="text-xs font-semibold text-slate-700 mt-1">{report.failCount} violations • {report.reviewStatus || 'submitted'}</p>
+                    </div>
+                    <button
+                      onClick={() => setSelectedReport(report)}
+                      className="px-3 py-2 rounded-lg bg-navy-900 text-white text-xs font-bold hover:bg-navy-800 transition flex items-center gap-1.5"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      View report
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {selectedReport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-950/70 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-slate-200">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
+              <div>
+                <p className="text-xs text-slate-500 font-mono">{selectedReport.id}</p>
+                <h3 className="text-xl font-bold font-serif-heading text-navy-900 mt-1">{selectedReport.productName || 'Inspector report'}</h3>
+                <p className="text-xs text-slate-600 mt-1">{selectedReport.manufacturerName} • Submitted by {selectedReport.submittedBy || 'Field Inspector'}</p>
+              </div>
+              <button
+                onClick={() => setSelectedReport(null)}
+                className="text-slate-400 hover:text-slate-700 text-xl leading-none"
+                aria-label="Close report"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-5">
+              <div>
+                <h4 className="text-xs font-bold text-navy-900 uppercase tracking-wider mb-2">Submitted label image</h4>
+                {(selectedReport.imageUrls?.length || selectedReport.imageUrl) ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    {(selectedReport.imageUrls?.length ? selectedReport.imageUrls : [selectedReport.imageUrl]).map((imageUrl, index) => (
+                      <img
+                        key={`${selectedReport.id}-image-${index}`}
+                        src={imageUrl}
+                        alt={`Submitted label ${index + 1} for ${selectedReport.productName || 'inspector report'}`}
+                        className="w-full h-44 object-contain rounded-xl border border-slate-200 bg-slate-50"
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="h-48 flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-500">
+                    No image was attached to this report.
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h4 className="text-xs font-bold text-navy-900 uppercase tracking-wider mb-2">Compliance report</h4>
+                <div className="space-y-2 border border-slate-200 rounded-xl overflow-hidden">
+                  {selectedReport.results.map(result => (
+                    <div key={result.ruleId} className="p-3 border-b last:border-b-0 border-slate-100">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-xs font-semibold text-navy-900">{result.title}</span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${result.status === 'pass' ? 'bg-emerald-100 text-emerald-800' : result.status === 'fail' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'}`}>
+                          {result.status.replace('_', ' ')}
+                        </span>
+                      </div>
+                      {result.matchedText && <p className="text-[11px] text-slate-500 mt-1">Matched: {result.matchedText}</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5">
+              <h4 className="text-xs font-bold text-navy-900 uppercase tracking-wider mb-2">Extracted OCR text</h4>
+              <pre className="p-3 bg-slate-900 text-emerald-400 rounded-xl text-[11px] font-mono whitespace-pre-wrap max-h-40 overflow-y-auto">
+                {selectedReport.extractedText || 'No OCR text extracted.'}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Strategic Framing Cards */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">

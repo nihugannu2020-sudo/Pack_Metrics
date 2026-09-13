@@ -6,6 +6,7 @@ import { validateRuleEngine } from '../utils/ruleEngine';
 import { BoundingBoxCanvas } from '../components/BoundingBoxCanvas';
 import { NoticeModal } from '../components/NoticeModal';
 import { DB } from '../utils/db';
+import { readFileAsDataUrl } from '../utils/file';
 import { Upload, CheckCircle2, XCircle, AlertTriangle, FileText, Eye, Info, Sparkles, Filter, ClipboardCheck } from 'lucide-react';
 
 interface InspectorDashboardProps {
@@ -24,21 +25,22 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
   
   const [scanHistory, setScanHistory] = useState<ComplianceReport[]>([]);
   const [submittedReports, setSubmittedReports] = useState<ComplianceReport[]>([]);
+  const [selectedSubmittedReport, setSelectedSubmittedReport] = useState<ComplianceReport | null>(null);
   const [isNoticeModalOpen, setIsNoticeModalOpen] = useState<boolean>(false);
-  const [customFilePreview, setCustomFilePreview] = useState<string | null>(null);
+  const [customFilePreviews, setCustomFilePreviews] = useState<string[]>([]);
 
   // Load history on mount
   useEffect(() => {
     const history = DB.getScans();
     setScanHistory(history);
-    setSubmittedReports(history.filter(scan => scan.reviewStatus === 'submitted'));
+    setSubmittedReports(history.filter(scan => scan.reviewStatus === 'submitted' && scan.submittedByRole === 'manufacturer'));
     // Auto-run first sample preset so inspector dashboard isn't empty on load
     runPresetScan(SAMPLE_PRESETS[0]);
   }, []);
 
   const runPresetScan = async (preset: SampleLabelPreset) => {
     setSelectedPresetId(preset.id);
-    setCustomFilePreview(null);
+    setCustomFilePreviews([]);
     setIsScanning(true);
 
     // Generate crisp synthetic label canvas & pre-computed OCR fallback
@@ -70,8 +72,13 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
       if (preset.config.productName) report.productName = preset.config.productName;
       if (preset.config.manufacturer) report.manufacturerName = preset.config.manufacturer;
 
-      setCurrentReport(report);
-      DB.saveScan(report);
+      const inspectorReport: ComplianceReport = {
+        ...report,
+        submittedBy: officerName,
+        submittedByRole: 'inspector',
+      };
+      setCurrentReport(inspectorReport);
+      DB.saveScan(inspectorReport);
       setScanHistory(DB.getScans());
     } catch (err) {
       console.error('Scan error:', err);
@@ -81,11 +88,13 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
   };
 
   const handleCustomFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const files = Array.from(e.target.files || []);
+    const file = files[0];
     if (!file) return;
 
-    const imageUrl = URL.createObjectURL(file);
-    setCustomFilePreview(imageUrl);
+    const imageUrls = await Promise.all(files.map(readFileAsDataUrl));
+    const imageUrl = imageUrls[0];
+    setCustomFilePreviews(imageUrls);
     setSelectedPresetId('');
     setIsScanning(true);
 
@@ -99,9 +108,15 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
         isImported,
         imageUrl,
       });
+      report.imageUrls = imageUrls;
 
-      setCurrentReport(report);
-      DB.saveScan(report);
+      const inspectorReport: ComplianceReport = {
+        ...report,
+        submittedBy: officerName,
+        submittedByRole: 'inspector',
+      };
+      setCurrentReport(inspectorReport);
+      DB.saveScan(inspectorReport);
       setScanHistory(DB.getScans());
     } catch (err) {
       console.error('Custom file scan error:', err);
@@ -123,7 +138,7 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
     });
     const updatedScans = DB.getScans();
     setScanHistory(updatedScans);
-    setSubmittedReports(updatedScans.filter(scan => scan.reviewStatus === 'submitted'));
+    setSubmittedReports(updatedScans.filter(scan => scan.reviewStatus === 'submitted' && scan.submittedByRole === 'manufacturer'));
     setCurrentReport({ ...report, reviewStatus, reviewedBy: officerName });
   };
 
@@ -243,6 +258,7 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
                   <input
                     type="file"
                     accept="image/*"
+                    multiple
                     onChange={handleCustomFileUpload}
                     className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                   />
@@ -251,9 +267,11 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
                   <p className="text-xs text-slate-500 mt-1">PNG, JPG, WEBP formats up to 10MB</p>
                 </div>
 
-                {customFilePreview && (
-                  <div className="rounded-xl overflow-hidden border border-slate-200 max-h-48 bg-slate-900 flex items-center justify-center">
-                    <img src={customFilePreview} alt="Uploaded Custom" className="max-h-48 object-contain" />
+                {customFilePreviews.length > 0 && (
+                  <div className="grid grid-cols-2 gap-2">
+                    {customFilePreviews.map((preview, index) => (
+                      <img key={preview} src={preview} alt={`Uploaded custom label ${index + 1}`} className="h-24 w-full rounded-lg border border-slate-200 object-contain bg-slate-900" />
+                    ))}
                   </div>
                 )}
               </div>
@@ -435,7 +453,7 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
                   <p className="text-xs text-slate-600">{report.manufacturerName} • {report.passCount} pass / {report.failCount} fail / {report.reviewCount} review</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => setCurrentReport(report)} className="px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-navy-900 hover:bg-slate-50 flex items-center gap-1.5">
+                  <button onClick={() => { setCurrentReport(report); setSelectedSubmittedReport(report); }} className="px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-navy-900 hover:bg-slate-50 flex items-center gap-1.5">
                     <Eye className="w-3.5 h-3.5" /> View
                   </button>
                   <button onClick={() => reviewManufacturerReport(report, 'rejected')} className="px-3 py-2 rounded-lg bg-red-100 text-red-800 text-xs font-bold hover:bg-red-200 flex items-center gap-1.5">
@@ -447,6 +465,75 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {selectedSubmittedReport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-950/70 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-slate-200">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
+              <div>
+                <p className="text-xs text-slate-500 font-mono">{selectedSubmittedReport.id}</p>
+                <h3 className="text-xl font-bold font-serif-heading text-navy-900 mt-1">Manufacturer Report Review</h3>
+                <p className="text-xs text-slate-600 mt-1">
+                  {selectedSubmittedReport.productName || 'Package label report'} • {selectedSubmittedReport.manufacturerName} • Submitted by {selectedSubmittedReport.submittedBy || 'Manufacturer'}
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedSubmittedReport(null)}
+                className="text-slate-400 hover:text-slate-700 text-xl leading-none"
+                aria-label="Close manufacturer report"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-5">
+              <div>
+                <h4 className="text-xs font-bold text-navy-900 uppercase tracking-wider mb-2">Shared package image</h4>
+                {(selectedSubmittedReport.imageUrls?.length || selectedSubmittedReport.imageUrl) ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    {(selectedSubmittedReport.imageUrls?.length ? selectedSubmittedReport.imageUrls : [selectedSubmittedReport.imageUrl]).map((imageUrl, index) => (
+                      <img
+                        key={`${selectedSubmittedReport.id}-image-${index}`}
+                        src={imageUrl}
+                        alt={`Package label ${index + 1} submitted by ${selectedSubmittedReport.submittedBy || 'manufacturer'}`}
+                        className="w-full h-52 object-contain rounded-xl border border-slate-200 bg-slate-900"
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="h-56 flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-500">
+                    No package image was attached to this report.
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h4 className="text-xs font-bold text-navy-900 uppercase tracking-wider mb-2">Submitted compliance report</h4>
+                <div className="space-y-2 border border-slate-200 rounded-xl overflow-hidden">
+                  {selectedSubmittedReport.results.map(result => (
+                    <div key={result.ruleId} className="p-3 border-b last:border-b-0 border-slate-100">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-xs font-semibold text-navy-900">{result.title}</span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${result.status === 'pass' ? 'bg-emerald-100 text-emerald-800' : result.status === 'fail' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'}`}>
+                          {result.status.replace('_', ' ')}
+                        </span>
+                      </div>
+                      {result.matchedText && <p className="text-[11px] text-slate-500 mt-1">Matched: {result.matchedText}</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5">
+              <h4 className="text-xs font-bold text-navy-900 uppercase tracking-wider mb-2">Extracted OCR text</h4>
+              <pre className="p-3 bg-slate-900 text-emerald-400 rounded-xl text-[11px] font-mono whitespace-pre-wrap max-h-40 overflow-y-auto">
+                {selectedSubmittedReport.extractedText || 'No OCR text extracted.'}
+              </pre>
+            </div>
           </div>
         </div>
       )}

@@ -4,6 +4,7 @@ import { DB } from '../utils/db';
 import { SAMPLE_PRESETS, generateCanvasLabel } from '../utils/sampleGenerator';
 import { performOCR } from '../utils/ocr';
 import { validateRuleEngine } from '../utils/ruleEngine';
+import { readFileAsDataUrl } from '../utils/file';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { Factory, ShieldCheck, FileText, CheckCircle, AlertTriangle, Building, RefreshCw, Upload, Send, Eye } from 'lucide-react';
 
@@ -12,30 +13,27 @@ interface ManufacturerDashboardProps {
 }
 
 export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({ userName }) => {
-  const [selectedManufacturer, setSelectedManufacturer] = useState<string>('All Manufacturers');
   const [scans, setScans] = useState<ComplianceReport[]>([]);
   const [notices, setNotices] = useState<LegalNotice[]>([]);
   const [currentReport, setCurrentReport] = useState<ComplianceReport | null>(null);
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [ocrProgress, setOcrProgress] = useState<number>(0);
   const [ocrStatusText, setOcrStatusText] = useState<string>('');
-  const [customFilePreview, setCustomFilePreview] = useState<string | null>(null);
+  const [customFilePreviews, setCustomFilePreviews] = useState<string[]>([]);
 
   useEffect(() => {
     setScans(DB.getScans());
     setNotices(DB.getNotices());
   }, []);
 
-  // Unique list of manufacturers found in scans
-  const manufacturerList = ['All Manufacturers', ...Array.from(new Set(scans.map(s => s.manufacturerName).filter(Boolean)))];
+  const manufacturerNames = Array.from(new Set(scans.map(s => s.manufacturerName).filter(Boolean)));
+  const normalizedUserName = userName.toLowerCase();
+  const ownedManufacturer = manufacturerNames.find(name =>
+    name.toLowerCase().split(/\s+/).some(word => word.length >= 4 && normalizedUserName.includes(word))
+  ) || '';
 
-  const filteredScans = selectedManufacturer === 'All Manufacturers'
-    ? scans
-    : scans.filter(s => s.manufacturerName.toLowerCase().includes(selectedManufacturer.toLowerCase()));
-
-  const filteredNotices = selectedManufacturer === 'All Manufacturers'
-    ? notices
-    : notices.filter(n => n.manufacturerName.toLowerCase().includes(selectedManufacturer.toLowerCase()));
+  const filteredScans = scans.filter(scan => scan.manufacturerName === ownedManufacturer);
+  const filteredNotices = notices.filter(notice => notice.manufacturerName === ownedManufacturer);
 
   const totalScans = filteredScans.length;
   const compliantScans = filteredScans.filter(s => s.overallStatus === 'Compliant').length;
@@ -70,7 +68,7 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({ us
   };
 
   const runPresetScan = async (preset: SampleLabelPreset) => {
-    setCustomFilePreview(null);
+    setCustomFilePreviews([]);
     setIsScanning(true);
     const { dataUrl, width, height, text: syntheticText, words: syntheticWords } = generateCanvasLabel(preset);
 
@@ -99,11 +97,13 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({ us
   };
 
   const handleCustomFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+    const files = Array.from(event.target.files || []);
+    const file = files[0];
     if (!file) return;
 
-    const imageUrl = URL.createObjectURL(file);
-    setCustomFilePreview(imageUrl);
+    const imageUrls = await Promise.all(files.map(readFileAsDataUrl));
+    const imageUrl = imageUrls[0];
+    setCustomFilePreviews(imageUrls);
     setIsScanning(true);
 
     try {
@@ -112,6 +112,7 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({ us
         setOcrStatusText(status);
       });
       const report = validateRuleEngine(ocrResult.text, ocrResult.words, { isImported: false, imageUrl });
+      report.imageUrls = imageUrls;
       saveDraftReport(report);
     } catch (err) {
       console.error('Manufacturer upload error:', err);
@@ -142,19 +143,10 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({ us
           </p>
         </div>
 
-        {/* Filter Dropdown */}
         <div className="flex items-center gap-2 bg-navy-800 p-2 rounded-xl border border-navy-700">
           <Building className="w-4 h-4 text-slate-400" />
-          <span className="text-xs text-slate-300 font-semibold">Filter Entity:</span>
-          <select
-            value={selectedManufacturer}
-            onChange={(e) => setSelectedManufacturer(e.target.value)}
-            className="bg-navy-950 text-white text-xs font-semibold px-3 py-1.5 rounded-lg border border-navy-700 focus:outline-none focus:ring-1 focus:ring-saffron"
-          >
-            {manufacturerList.map(m => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </select>
+          <span className="text-xs text-slate-300 font-semibold">Organization:</span>
+          <span className="text-xs text-white font-bold">{ownedManufacturer || 'No organization assigned'}</span>
         </div>
       </div>
 
@@ -226,12 +218,18 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({ us
           <div className="space-y-3">
             <span className="text-xs font-bold text-navy-900 uppercase tracking-wider">Upload a package image</span>
             <label className="border-2 border-dashed border-slate-300 hover:border-saffron rounded-xl p-6 text-center cursor-pointer bg-slate-50 block transition">
-              <input type="file" accept="image/*" onChange={handleCustomFileUpload} className="hidden" />
+              <input type="file" accept="image/*" multiple onChange={handleCustomFileUpload} className="hidden" />
               <Upload className="w-7 h-7 text-saffron mx-auto mb-2" />
               <span className="block text-xs font-bold text-navy-900">Choose label photo</span>
               <span className="block text-[11px] text-slate-500 mt-1">PNG, JPG, or WEBP up to 10MB</span>
             </label>
-            {customFilePreview && <img src={customFilePreview} alt="Uploaded package label" className="max-h-32 mx-auto rounded-lg object-contain" />}
+            {customFilePreviews.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {customFilePreviews.map((preview, index) => (
+                  <img key={preview} src={preview} alt={`Uploaded package label ${index + 1}`} className="h-24 w-full rounded-lg border border-slate-200 object-contain bg-slate-50" />
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -297,24 +295,23 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({ us
         </div>
       </div>
 
-      {/* Issued Legal Notices Management Section */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-bold font-serif-heading text-navy-900 text-lg flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-violation" />
-              <span>Show-Cause Notices Issued Against Manufacturer</span>
+              <span>Complaints Raised Against Your Organization</span>
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
               Click status button to toggle acknowledgment or response state.
             </p>
           </div>
-          <span className="text-xs text-slate-500 font-mono">{filteredNotices.length} Notices Recorded</span>
+          <span className="text-xs text-slate-500 font-mono">{filteredNotices.length} Complaints Recorded</span>
         </div>
 
         {filteredNotices.length === 0 ? (
           <div className="p-8 text-center bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500">
-            No show-cause notices issued for the selected manufacturer filter.
+            No complaints have been raised against your organization.
           </div>
         ) : (
           <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
