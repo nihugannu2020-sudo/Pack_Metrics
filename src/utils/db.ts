@@ -204,6 +204,12 @@ export const DB = {
     localStorage.setItem(STORAGE_KEYS.SCANS, JSON.stringify(updated));
   },
 
+  updateScan(scan: ComplianceReport): void {
+    const scans = this.getScans();
+    const updated = scans.map(existingScan => (existingScan.id === scan.id ? scan : existingScan));
+    localStorage.setItem(STORAGE_KEYS.SCANS, JSON.stringify(updated));
+  },
+
   updateScanReview(
     scanId: string,
     review: Pick<ComplianceReport, 'reviewStatus' | 'reviewedBy' | 'reviewedAt' | 'reviewNote'>

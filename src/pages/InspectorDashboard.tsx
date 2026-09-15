@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import type { ComplianceReport, LegalNotice, SampleLabelPreset } from '../types';
-import { SAMPLE_PRESETS, generateCanvasLabel } from '../utils/sampleGenerator';
+import React, { useState, useEffect, useRef } from 'react';
+import type { ComplianceReport, LegalNotice } from '../types';
 import { performOCR } from '../utils/ocr';
 import { validateRuleEngine } from '../utils/ruleEngine';
 import { BoundingBoxCanvas } from '../components/BoundingBoxCanvas';
@@ -14,8 +13,6 @@ interface InspectorDashboardProps {
 }
 
 export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerName }) => {
-  const [activeSourceTab, setActiveSourceTab] = useState<'gallery' | 'upload'>('gallery');
-  const [selectedPresetId, setSelectedPresetId] = useState<string>('sample-1-compliant');
   const [isImported, setIsImported] = useState<boolean>(false);
   
   const [currentReport, setCurrentReport] = useState<ComplianceReport | null>(null);
@@ -26,66 +23,19 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
   const [scanHistory, setScanHistory] = useState<ComplianceReport[]>([]);
   const [submittedReports, setSubmittedReports] = useState<ComplianceReport[]>([]);
   const [selectedSubmittedReport, setSelectedSubmittedReport] = useState<ComplianceReport | null>(null);
+  const [isReviewScanning, setIsReviewScanning] = useState<boolean>(false);
+  const [reviewScanProgress, setReviewScanProgress] = useState<number>(0);
+  const [reviewScanStatus, setReviewScanStatus] = useState<string>('');
   const [isNoticeModalOpen, setIsNoticeModalOpen] = useState<boolean>(false);
   const [customFilePreviews, setCustomFilePreviews] = useState<string[]>([]);
+  const reportSectionRef = useRef<HTMLDivElement>(null);
 
   // Load history on mount
   useEffect(() => {
     const history = DB.getScans();
     setScanHistory(history);
     setSubmittedReports(history.filter(scan => scan.reviewStatus === 'submitted' && scan.submittedByRole === 'manufacturer'));
-    // Auto-run first sample preset so inspector dashboard isn't empty on load
-    runPresetScan(SAMPLE_PRESETS[0]);
   }, []);
-
-  const runPresetScan = async (preset: SampleLabelPreset) => {
-    setSelectedPresetId(preset.id);
-    setCustomFilePreviews([]);
-    setIsScanning(true);
-
-    // Generate crisp synthetic label canvas & pre-computed OCR fallback
-    const { dataUrl, width, height, text: syntheticText, words: syntheticWords } = generateCanvasLabel(preset);
-
-    try {
-      // Run OCR (with fallback to synthetic text if Tesseract worker is loading)
-      const ocrResult = await performOCR(
-        dataUrl,
-        { text: syntheticText, words: syntheticWords },
-        (progress, status) => {
-          setOcrProgress(progress);
-          setOcrStatusText(status);
-        }
-      );
-
-      // Execute AST Rule Engine
-      const report = validateRuleEngine(
-        ocrResult.text || syntheticText,
-        ocrResult.words && ocrResult.words.length > 0 ? ocrResult.words : syntheticWords,
-        {
-          isImported: preset.config.isImported || isImported,
-          imageUrl: dataUrl,
-          imageDimensions: { width, height },
-        }
-      );
-
-      // Override names if preset has specific titles
-      if (preset.config.productName) report.productName = preset.config.productName;
-      if (preset.config.manufacturer) report.manufacturerName = preset.config.manufacturer;
-
-      const inspectorReport: ComplianceReport = {
-        ...report,
-        submittedBy: officerName,
-        submittedByRole: 'inspector',
-      };
-      setCurrentReport(inspectorReport);
-      DB.saveScan(inspectorReport);
-      setScanHistory(DB.getScans());
-    } catch (err) {
-      console.error('Scan error:', err);
-    } finally {
-      setIsScanning(false);
-    }
-  };
 
   const handleCustomFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -95,7 +45,6 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
     const imageUrls = await Promise.all(files.map(readFileAsDataUrl));
     const imageUrl = imageUrls[0];
     setCustomFilePreviews(imageUrls);
-    setSelectedPresetId('');
     setIsScanning(true);
 
     try {
@@ -130,6 +79,7 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
   };
 
   const reviewManufacturerReport = (report: ComplianceReport, reviewStatus: 'approved' | 'rejected') => {
+    if (isReviewScanning) return;
     DB.updateScanReview(report.id, {
       reviewStatus,
       reviewedBy: officerName,
@@ -140,6 +90,56 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
     setScanHistory(updatedScans);
     setSubmittedReports(updatedScans.filter(scan => scan.reviewStatus === 'submitted' && scan.submittedByRole === 'manufacturer'));
     setCurrentReport({ ...report, reviewStatus, reviewedBy: officerName });
+  };
+
+  const scanSubmittedReport = async (report: ComplianceReport) => {
+    const imageUrls = report.imageUrls?.length ? report.imageUrls : report.imageUrl ? [report.imageUrl] : [];
+    if (imageUrls.length === 0) return;
+
+    setIsReviewScanning(true);
+    setReviewScanProgress(0);
+    setReviewScanStatus('Starting inspector image scan...');
+
+    try {
+      const ocrResults = [];
+      for (let index = 0; index < imageUrls.length; index += 1) {
+        const result = await performOCR(imageUrls[index], undefined, (progress, status) => {
+          setReviewScanProgress(Math.round(((index + progress / 100) / imageUrls.length) * 100));
+          setReviewScanStatus(`Scanning image ${index + 1} of ${imageUrls.length}: ${status}`);
+        });
+        ocrResults.push(result);
+      }
+
+      const rescannedReport = validateRuleEngine(
+        ocrResults.map(result => result.text).join('\n'),
+        ocrResults[0]?.words || [],
+        { isImported: report.isImported, imageUrl: imageUrls[0], imageDimensions: report.imageDimensions }
+      );
+      const updatedReport: ComplianceReport = {
+        ...rescannedReport,
+        id: report.id,
+        timestamp: report.timestamp,
+        productName: report.productName,
+        manufacturerName: report.manufacturerName,
+        submittedBy: report.submittedBy,
+        submittedByRole: report.submittedByRole,
+        reviewStatus: report.reviewStatus,
+        imageUrls,
+      };
+
+      DB.updateScan(updatedReport);
+      setCurrentReport(updatedReport);
+      setSelectedSubmittedReport(updatedReport);
+      setScanHistory(DB.getScans());
+      setSubmittedReports(DB.getScans().filter(scan => scan.reviewStatus === 'submitted' && scan.submittedByRole === 'manufacturer'));
+      setReviewScanProgress(100);
+      setReviewScanStatus('Inspector scan complete');
+    } catch (error) {
+      console.error('Manufacturer submission scan error:', error);
+      setReviewScanStatus('Unable to scan the submitted images');
+    } finally {
+      setIsReviewScanning(false);
+    }
   };
 
   return (
@@ -185,75 +185,11 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
         <div className="lg:col-span-5 space-y-6">
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
             <h2 className="text-base font-bold font-serif-heading text-navy-900 mb-3 flex items-center justify-between">
-              <span>Scan Package Label</span>
+              <span>Upload Package Label</span>
               <Sparkles className="w-4 h-4 text-saffron" />
             </h2>
 
-            {/* Source Tabs */}
-            <div className="flex bg-slate-100 p-1 rounded-xl mb-4">
-              <button
-                onClick={() => setActiveSourceTab('gallery')}
-                className={`flex-1 py-2 text-xs font-semibold rounded-lg transition ${
-                  activeSourceTab === 'gallery'
-                    ? 'bg-white text-navy-900 shadow-xs'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                Sample Gallery (5 Presets)
-              </button>
-              <button
-                onClick={() => setActiveSourceTab('upload')}
-                className={`flex-1 py-2 text-xs font-semibold rounded-lg transition ${
-                  activeSourceTab === 'upload'
-                    ? 'bg-white text-navy-900 shadow-xs'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                Upload Custom Photo
-              </button>
-            </div>
-
-            {/* Gallery View */}
-            {activeSourceTab === 'gallery' && (
-              <div className="space-y-3">
-                <p className="text-xs text-slate-500 mb-2">
-                  Select a pre-built synthetic label to run live OCR & rule engine:
-                </p>
-                {SAMPLE_PRESETS.map((preset) => {
-                  const isSelected = selectedPresetId === preset.id;
-                  return (
-                    <div
-                      key={preset.id}
-                      onClick={() => runPresetScan(preset)}
-                      className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
-                        isSelected
-                          ? 'border-saffron bg-saffron-50/40 shadow-sm'
-                          : 'border-slate-200 bg-white hover:border-slate-300'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <h4 className="font-bold text-navy-900 text-xs">{preset.title}</h4>
-                        <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            preset.badgeType === 'pass'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-red-100 text-red-800'
-                          }`}
-                        >
-                          {preset.badgeType === 'pass' ? 'PASS' : 'VIOLATION'}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-500 font-mono mb-1">{preset.subtitle}</p>
-                      <p className="text-xs text-slate-600 line-clamp-2">{preset.description}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Custom Upload View */}
-            {activeSourceTab === 'upload' && (
-              <div className="space-y-4">
+            <div className="space-y-4">
                 <div className="border-2 border-dashed border-slate-300 hover:border-saffron rounded-xl p-6 text-center cursor-pointer bg-slate-50 hover:bg-saffron-50/20 transition relative">
                   <input
                     type="file"
@@ -274,8 +210,7 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
                     ))}
                   </div>
                 )}
-              </div>
-            )}
+            </div>
           </div>
 
           {/* OCR Progress Bar if running */}
@@ -313,7 +248,7 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
         </div>
 
         {/* Right Column: Canvas Bounding Box Overlay & Compliance Checklist (7 cols) */}
-        <div className="lg:col-span-7 space-y-6">
+        <div ref={reportSectionRef} id="inspector-report" className="lg:col-span-7 space-y-6">
 
           {/* Canvas Overlay Component */}
           <BoundingBoxCanvas report={currentReport} isScanning={isScanning} />
@@ -341,19 +276,27 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
                   <p className="text-xs text-slate-600">{currentReport.manufacturerName}</p>
                 </div>
 
-                {/* Generate Legal Notice Button */}
-                <button
-                  disabled={currentReport.failCount === 0}
-                  onClick={() => setIsNoticeModalOpen(true)}
-                  className={`px-5 py-2.5 rounded-xl font-bold text-xs shadow flex items-center justify-center gap-2 transition ${
-                    currentReport.failCount > 0
-                      ? 'bg-violation text-white hover:bg-red-700 cursor-pointer animate-pulse'
-                      : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
-                  }`}
-                >
-                  <FileText className="w-4 h-4" />
-                  <span>Generate Legal Notice ({currentReport.failCount} Violations)</span>
-                </button>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <button
+                    onClick={() => reportSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                    className="px-4 py-2.5 rounded-xl border border-slate-200 text-navy-900 hover:bg-slate-50 font-bold text-xs flex items-center justify-center gap-2 transition"
+                  >
+                    <Eye className="w-4 h-4" />
+                    <span>View Report</span>
+                  </button>
+                  <button
+                    disabled={currentReport.failCount === 0}
+                    onClick={() => setIsNoticeModalOpen(true)}
+                    className={`px-4 py-2.5 rounded-xl font-bold text-xs shadow flex items-center justify-center gap-2 transition ${
+                      currentReport.failCount > 0
+                        ? 'bg-violation text-white hover:bg-red-700 cursor-pointer animate-pulse'
+                        : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                    }`}
+                  >
+                    <FileText className="w-4 h-4" />
+                    <span>File a Complaint</span>
+                  </button>
+                </div>
               </div>
 
               {/* Statutory Compliance Checklist Table */}
@@ -456,10 +399,10 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
                   <button onClick={() => { setCurrentReport(report); setSelectedSubmittedReport(report); }} className="px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-navy-900 hover:bg-slate-50 flex items-center gap-1.5">
                     <Eye className="w-3.5 h-3.5" /> View
                   </button>
-                  <button onClick={() => reviewManufacturerReport(report, 'rejected')} className="px-3 py-2 rounded-lg bg-red-100 text-red-800 text-xs font-bold hover:bg-red-200 flex items-center gap-1.5">
+                  <button disabled={isReviewScanning} onClick={() => reviewManufacturerReport(report, 'rejected')} className="px-3 py-2 rounded-lg bg-red-100 text-red-800 text-xs font-bold hover:bg-red-200 disabled:opacity-50 flex items-center gap-1.5">
                     <XCircle className="w-3.5 h-3.5" /> Reject
                   </button>
-                  <button onClick={() => reviewManufacturerReport(report, 'approved')} className="px-3 py-2 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-bold hover:bg-emerald-200 flex items-center gap-1.5">
+                  <button disabled={isReviewScanning} onClick={() => reviewManufacturerReport(report, 'approved')} className="px-3 py-2 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-bold hover:bg-emerald-200 disabled:opacity-50 flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5" /> Approve
                   </button>
                 </div>
@@ -491,7 +434,28 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-5">
               <div>
-                <h4 className="text-xs font-bold text-navy-900 uppercase tracking-wider mb-2">Shared package image</h4>
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <h4 className="text-xs font-bold text-navy-900 uppercase tracking-wider">Shared package image</h4>
+                  <button
+                    onClick={() => scanSubmittedReport(selectedSubmittedReport)}
+                    disabled={isReviewScanning || !(selectedSubmittedReport.imageUrls?.length || selectedSubmittedReport.imageUrl)}
+                    className="px-3 py-1.5 rounded-lg bg-navy-900 text-white text-[11px] font-bold hover:bg-navy-800 disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    {isReviewScanning ? 'Scanning...' : 'Scan images'}
+                  </button>
+                </div>
+                {isReviewScanning && (
+                  <div className="mb-3 p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                    <div className="flex justify-between text-[11px] font-semibold text-navy-900">
+                      <span>{reviewScanStatus}</span>
+                      <span>{reviewScanProgress}%</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                      <div className="h-full bg-saffron transition-all" style={{ width: `${reviewScanProgress}%` }} />
+                    </div>
+                  </div>
+                )}
                 {(selectedSubmittedReport.imageUrls?.length || selectedSubmittedReport.imageUrl) ? (
                   <div className="grid grid-cols-2 gap-2">
                     {(selectedSubmittedReport.imageUrls?.length ? selectedSubmittedReport.imageUrls : [selectedSubmittedReport.imageUrl]).map((imageUrl, index) => (

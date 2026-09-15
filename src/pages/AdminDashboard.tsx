@@ -6,7 +6,7 @@ import { validateRuleEngine } from '../utils/ruleEngine';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell
 } from 'recharts';
-import { BarChart3, ShieldCheck, AlertTriangle, FileText, TrendingDown, Scale, Lock, Award, Activity, Eye, ScanLine } from 'lucide-react';
+import { BarChart3, ShieldCheck, AlertTriangle, FileText, Award, Activity, Eye, ScanLine } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
   const [scans, setScans] = useState<ComplianceReport[]>([]);
@@ -249,56 +249,6 @@ export const AdminDashboard: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-bold font-serif-heading text-navy-900 text-lg flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-violation" />
-              <span>All Complaints Raised by Field Inspectors</span>
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Central view of every inspector-generated complaint and its affected manufacturer.
-            </p>
-          </div>
-          <span className="text-xs text-slate-500 font-mono">{notices.length} Complaints Recorded</span>
-        </div>
-
-        {notices.length === 0 ? (
-          <div className="p-8 text-center bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500">
-            No complaints have been raised by field inspectors.
-          </div>
-        ) : (
-          <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
-            {notices.map(notice => (
-              <div key={notice.id} className="p-4 bg-white hover:bg-slate-50/80 transition space-y-2">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-bold text-xs bg-navy-900 text-white px-2 py-0.5 rounded">
-                      {notice.noticeNumber}
-                    </span>
-                    <span className="text-xs text-slate-500">Raised {notice.date} by {notice.issuedBy}</span>
-                  </div>
-                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${notice.status === 'Open' ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800'}`}>
-                    {notice.status}
-                  </span>
-                </div>
-                <div>
-                  <h4 className="font-bold text-navy-900 text-sm">{notice.productName}</h4>
-                  <p className="text-xs text-slate-600">{notice.manufacturerName} — {notice.manufacturerAddress}</p>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {notice.violations.map((violation, index) => (
-                    <span key={index} className="text-[10px] bg-red-100 text-red-900 px-2 py-0.5 rounded font-semibold border border-red-200">
-                      {violation.legalRef}: {violation.title}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="font-bold font-serif-heading text-navy-900 text-lg flex items-center gap-2">
               <FileText className="w-5 h-5 text-saffron" />
               <span>Reports Submitted by Field Inspectors</span>
             </h3>
@@ -432,44 +382,6 @@ export const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Strategic Framing Cards */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-        <h3 className="font-bold font-serif-heading text-navy-900 text-lg">
-          System Strategic Value Proposition & Impact
-        </h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-slate-50 p-5 rounded-xl border border-slate-200">
-            <div className="flex items-center gap-2 font-bold text-navy-900 text-sm mb-2">
-              <TrendingDown className="w-5 h-5 text-saffron" />
-              <span>Audit Cost Reduction</span>
-            </div>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Automating OCR text extraction and AST rule matching reduces field inspection cycle time from 20 minutes to under 3 seconds per SKU.
-            </p>
-          </div>
-
-          <div className="bg-slate-50 p-5 rounded-xl border border-slate-200">
-            <div className="flex items-center gap-2 font-bold text-navy-900 text-sm mb-2">
-              <Scale className="w-5 h-5 text-saffron" />
-              <span>MSME Fair Competition</span>
-            </div>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Enforces level playing field by detecting hidden prices and deceptive package sizing that unfairly penalizes compliant MSME packers.
-            </p>
-          </div>
-
-          <div className="bg-slate-50 p-5 rounded-xl border border-slate-200">
-            <div className="flex items-center gap-2 font-bold text-navy-900 text-sm mb-2">
-              <Lock className="w-5 h-5 text-saffron" />
-              <span>Consumer Loss Mitigation</span>
-            </div>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Prevents consumer overcharging by verifying MRP tax inclusions and validating consumer grievance contact details across physical & digital retail.
-            </p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

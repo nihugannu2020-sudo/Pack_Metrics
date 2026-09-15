@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { ComplianceReport, LegalNotice, SampleLabelPreset } from '../types';
 import { DB } from '../utils/db';
 import { SAMPLE_PRESETS, generateCanvasLabel } from '../utils/sampleGenerator';
 import { performOCR } from '../utils/ocr';
 import { validateRuleEngine } from '../utils/ruleEngine';
 import { readFileAsDataUrl } from '../utils/file';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { Factory, ShieldCheck, FileText, CheckCircle, AlertTriangle, Building, RefreshCw, Upload, Send, Eye } from 'lucide-react';
+import { Factory, ShieldCheck, FileText, CheckCircle, AlertTriangle, Building, Upload, Send, Eye } from 'lucide-react';
 
 interface ManufacturerDashboardProps {
   userName: string;
@@ -20,6 +19,7 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({ us
   const [ocrProgress, setOcrProgress] = useState<number>(0);
   const [ocrStatusText, setOcrStatusText] = useState<string>('');
   const [customFilePreviews, setCustomFilePreviews] = useState<string[]>([]);
+  const reportSectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setScans(DB.getScans());
@@ -38,22 +38,6 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({ us
   const totalScans = filteredScans.length;
   const compliantScans = filteredScans.filter(s => s.overallStatus === 'Compliant').length;
   const complianceRate = totalScans > 0 ? Math.round((compliantScans / totalScans) * 100) : 100;
-
-  // Chart data: synthesize daily/weekly compliance trend
-  const trendData = [
-    { date: '01 Sep', compliance: 66 },
-    { date: '03 Sep', compliance: 50 },
-    { date: '05 Sep', compliance: 60 },
-    { date: '07 Sep', compliance: 85 },
-    { date: '09 Sep', compliance: 75 },
-    { date: 'Current', compliance: complianceRate },
-  ];
-
-  const handleToggleNoticeStatus = (noticeId: string, currentStatus: string) => {
-    const nextStatus = currentStatus === 'Open' ? 'Acknowledged' : 'Open';
-    DB.updateNoticeStatus(noticeId, nextStatus as any);
-    setNotices(DB.getNotices());
-  };
 
   const saveDraftReport = (report: ComplianceReport) => {
     const manufacturerReport: ComplianceReport = {
@@ -245,7 +229,7 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({ us
         )}
 
         {currentReport && !isScanning && (
-          <div className="border border-slate-200 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div ref={reportSectionRef} id="manufacturer-report" className="border border-slate-200 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
                 <Eye className="w-4 h-4 text-saffron" />
@@ -256,105 +240,50 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({ us
               </div>
               <h4 className="text-sm font-bold text-navy-900 mt-1">{currentReport.productName || 'Uploaded package report'}</h4>
               <p className="text-xs text-slate-500">{currentReport.passCount} passed, {currentReport.failCount} failed, {currentReport.reviewCount} requiring review</p>
+              {(currentReport.failCount > 0 || currentReport.reviewCount > 0) && (
+                <div className="mt-2 space-y-1">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Needs attention</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {currentReport.results
+                      .filter(result => result.status !== 'pass')
+                      .map(result => (
+                        <span
+                          key={result.ruleId}
+                          className={`text-[11px] font-semibold px-2 py-1 rounded-md ${
+                            result.status === 'fail'
+                              ? 'bg-red-50 text-red-800 border border-red-200'
+                              : 'bg-amber-50 text-amber-800 border border-amber-200'
+                          }`}
+                        >
+                          {result.status === 'fail' ? 'Missing: ' : 'Review: '}{result.title}
+                        </span>
+                      ))}
+                  </div>
+                </div>
+              )}
               {currentReport.reviewStatus === 'submitted' && <p className="text-xs text-amber-700 font-semibold mt-1">Submitted to inspector for approval</p>}
             </div>
-            <button
-              onClick={submitCurrentReport}
-              disabled={currentReport.reviewStatus === 'submitted' || currentReport.reviewStatus === 'approved'}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-navy-900 hover:bg-navy-800 disabled:bg-slate-200 disabled:text-slate-500 transition flex items-center justify-center gap-2"
-            >
-              <Send className="w-3.5 h-3.5" />
-              {currentReport.reviewStatus === 'submitted' ? 'Awaiting Inspector' : 'Submit for Approval'}
-            </button>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <button
+                onClick={() => reportSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-navy-900 hover:bg-slate-50 transition flex items-center justify-center gap-2"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                View Report
+              </button>
+              <button
+                onClick={submitCurrentReport}
+                disabled={currentReport.reviewStatus === 'submitted' || currentReport.reviewStatus === 'approved'}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-navy-900 hover:bg-navy-800 disabled:bg-slate-200 disabled:text-slate-500 transition flex items-center justify-center gap-2"
+              >
+                <Send className="w-3.5 h-3.5" />
+                {currentReport.reviewStatus === 'submitted' ? 'Awaiting Inspector' : 'Submit for Approval'}
+              </button>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Compliance Trend Chart */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-        <h3 className="font-bold font-serif-heading text-navy-900 text-lg">
-          Package Declaration Compliance Rate Trend
-        </h3>
-        <p className="text-xs text-slate-500">
-          Historical pass percentage tracking Rule 6 compliance across inspect scans over time.
-        </p>
-
-        <div className="h-64 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={trendData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="date" stroke="#64748b" fontSize={12} />
-              <YAxis domain={[0, 100]} unit="%" stroke="#64748b" fontSize={12} />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#0B1F3A', color: '#fff', borderRadius: '8px', fontSize: '12px' }}
-                formatter={(val: any) => [`${val}%`, 'Compliance Rate']}
-              />
-              <Line type="monotone" dataKey="compliance" stroke="#F26B21" strokeWidth={3} dot={{ r: 5, fill: '#F26B21' }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="font-bold font-serif-heading text-navy-900 text-lg flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-violation" />
-              <span>Complaints Raised Against Your Organization</span>
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Click status button to toggle acknowledgment or response state.
-            </p>
-          </div>
-          <span className="text-xs text-slate-500 font-mono">{filteredNotices.length} Complaints Recorded</span>
-        </div>
-
-        {filteredNotices.length === 0 ? (
-          <div className="p-8 text-center bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500">
-            No complaints have been raised against your organization.
-          </div>
-        ) : (
-          <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
-            {filteredNotices.map((notice) => (
-              <div key={notice.id} className="p-4 bg-white hover:bg-slate-50/80 transition flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-bold text-xs bg-navy-900 text-white px-2 py-0.5 rounded">
-                      {notice.noticeNumber}
-                    </span>
-                    <span className="text-xs text-slate-500 font-mono">Issued: {notice.date}</span>
-                    <span className="text-xs text-slate-500">• By {notice.issuedBy}</span>
-                  </div>
-                  <h4 className="font-bold text-navy-900 text-sm">{notice.productName}</h4>
-                  <p className="text-xs text-slate-600">{notice.manufacturerName} — {notice.manufacturerAddress}</p>
-                  
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {notice.violations.map((v, idx) => (
-                      <span key={idx} className="text-[10px] bg-red-100 text-red-900 px-2 py-0.5 rounded font-semibold border border-red-200">
-                        {v.legalRef}: {v.title}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => handleToggleNoticeStatus(notice.id, notice.status)}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition shadow-xs flex items-center gap-1.5 ${
-                      notice.status === 'Acknowledged'
-                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                        : 'bg-saffron text-white hover:bg-saffron-600'
-                    }`}
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    <span>Status: {notice.status} (Click to Toggle)</span>
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 };
