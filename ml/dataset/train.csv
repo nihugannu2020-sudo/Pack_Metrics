@@ -1,0 +1,27 @@
+text,label
+"Maximum Retail Price ₹9,999.00 Inclusive of all Taxes",MRP
+"MRP Rs. 1,499",MRP
+"Manufactured by Harman International India Pvt Ltd",MANUFACTURER
+"Packed by A-One Foods Pvt Ltd",PACKER
+"Imported by Global Trade Solutions",IMPORTER
+"Country of Origin: India",COUNTRY_OF_ORIGIN
+"Net Quantity 500 g",NET_QUANTITY
+"500 g",NET_QUANTITY
+"Month & Year of Manufacture: June 2026",MFG_DATE
+"Mfg Date 06/2026",MFG_DATE
+"Customer Care: 1800-111-4000",CONSUMER_CARE
+"Consumer Care support@brand.com",CONSUMER_CARE
+"Bluetooth 5.3",TECHNICAL_SPECIFICATION
+"Model JBLT770NCBLK",MODEL_NUMBER
+"Serial Number: 1122334455",SERIAL_NUMBER
+"EAN: 8901234567890",EAN_BARCODE
+"Warranty 12 months",WARRANTY
+"https://example.com",WEBSITE
+"5400",RANDOM_NUMBER
+"This is a special promotional offer today",MARKETING_TEXT
+"Fresh milk 1 Litre",COMMODITY_NAME
+"Address: 42, MG Road, Bengaluru 560001",ADDRESS
+"Unit Sale Price ₹149.00",UNIT_SALE_PRICE
+"Best Before 12/2027",BEST_BEFORE
+"Use by 31/12/2026",USE_BY
+"Dimensions: 24 x 18 x 12 cm",DIMENSIONS

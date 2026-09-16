@@ -1,4 +1,5 @@
 import rulesData from '../data/rules.json';
+import { extractFieldsFromText } from '../services/compliance/fieldExtractor';
 import type { OCRWord, RuleResult, ComplianceReport, DeclarationRule, BoundingBox } from '../types';
 
 export function validateRuleEngine(
@@ -9,11 +10,11 @@ export function validateRuleEngine(
   const cleanText = extractedText.replace(/\s+/g, ' ');
   const results: RuleResult[] = [];
   const rules = rulesData.declarations as DeclarationRule[];
+  const fields = extractFieldsFromText(extractedText);
 
-  // Helper to find matching word bounding boxes
   const findMatchingBboxes = (pattern: RegExp | string): BoundingBox[] => {
     const matched: BoundingBox[] = [];
-    words.forEach(w => {
+    words.forEach((w) => {
       const textToTest = w.text;
       if (typeof pattern === 'string') {
         if (textToTest.toLowerCase().includes(pattern.toLowerCase())) {
@@ -26,157 +27,108 @@ export function validateRuleEngine(
     return matched;
   };
 
-  let detectedProductName = '';
-  let detectedManufacturer = '';
+  const manufacturer = fields.manufacturer.value ?? 'Packer / Manufacturer';
+  const commodityName = fields.commodityName.value ?? 'Packaged Product';
 
-  // Process each declaration rule
-  rules.forEach(rule => {
+  rules.forEach((rule) => {
     let status: 'pass' | 'fail' | 'manual_review' = 'fail';
-    let matchedText: string | undefined = undefined;
+    let matchedText: string | undefined;
     let matchedBboxes: BoundingBox[] = [];
-    let warning: string | undefined = undefined;
-    let guidanceNote: string | undefined = undefined;
+    let warning: string | undefined;
+    let guidanceNote: string | undefined;
 
     switch (rule.id) {
       case 'MANUFACTURER_ADDRESS': {
-        const mfdRegex = /(mfd|manufactured|marketed|packed|imported)\s+by[:\s]*([^\n,]+)/i;
-        const pinRegex = /\b\d{6}\b/;
-        const mfdMatch = cleanText.match(mfdRegex);
-        const pinMatch = cleanText.match(pinRegex);
-
-        if (mfdMatch || pinMatch) {
-          status = 'pass';
-          matchedText = mfdMatch ? mfdMatch[0] : (pinMatch ? `PIN Code: ${pinMatch[0]}` : 'Address found');
-          detectedManufacturer = mfdMatch ? mfdMatch[2].trim() : 'Detected Manufacturer';
-          
-          matchedBboxes = [
-            ...findMatchingBboxes(/(mfd|manufactured|marketed|packed|imported|by)/i),
-            ...findMatchingBboxes(/\b\d{6}\b/)
-          ];
+        const hasManufacturerContext = Boolean(fields.manufacturer.value);
+        const hasPin = /\b\d{6}\b/.test(cleanText);
+        if (hasManufacturerContext || hasPin) {
+          status = hasManufacturerContext ? 'pass' : 'manual_review';
+          matchedText = fields.manufacturer.value || `PIN detected: ${cleanText.match(/\b\d{6}\b/)?.[0] ?? 'unknown'}`;
+          matchedBboxes = findMatchingBboxes(/(mfd|manufactured|marketed|packed|imported|by)/i);
+          guidanceNote = hasManufacturerContext ? 'Contextual label and nearby text indicate manufacturer/packer/importer details.' : 'PIN alone is not sufficient; manual review required.';
         } else {
           status = 'fail';
+          guidanceNote = 'No manufacturer/packer/importer declaration with sufficient contextual evidence was found.';
         }
         break;
       }
-
       case 'COMMODITY_NAME': {
-        // First prominent text line or line without numbers
-        const lines = extractedText.split('\n').map(l => l.trim()).filter(l => l.length > 2);
-        const likelyTitle = lines.find(l => !/₹|rs|mrp|\d{6}|mfd|packed|batch/i.test(l));
-        
-        if (likelyTitle) {
-          status = 'manual_review'; // Per Rule 6(1)(b) detectionHint: mark manual review rather than hard fail
-          matchedText = likelyTitle;
-          detectedProductName = likelyTitle;
-          matchedBboxes = findMatchingBboxes(likelyTitle.split(' ')[0] || likelyTitle);
-          guidanceNote = "Generic name identified. Inspector verify exact statutory product name alignment.";
+        if (fields.commodityName.value) {
+          status = 'manual_review';
+          matchedText = fields.commodityName.value;
+          matchedBboxes = findMatchingBboxes(fields.commodityName.value.slice(0, 12));
+          guidanceNote = 'Generic name was detected; inspector confirmation is recommended when OCR positioning is uncertain.';
         } else {
           status = 'manual_review';
-          matchedText = "Unclear from raw OCR";
-          guidanceNote = "Requires officer manual verification for non-standard positioning.";
+          matchedText = 'Unclear from raw OCR';
+          guidanceNote = 'Requires officer manual verification for non-standard placement.';
         }
         break;
       }
-
       case 'NET_QUANTITY': {
-        const qtyRegex = /(\d+(\.\d+)?)\s?(g|gm|grams?|kg|kilograms?|ml|millilitres?|milliliters?|l|litres?|liters?|nos?|pieces?|units?)\b/i;
-        const qtyMatch = cleanText.match(qtyRegex);
-
-        if (qtyMatch) {
+        if (fields.netQuantity.value) {
           status = 'pass';
-          matchedText = qtyMatch[0];
-          matchedBboxes = findMatchingBboxes(qtyRegex);
-
-          const valueNum = parseFloat(qtyMatch[1]);
-          const unit = qtyMatch[3].toLowerCase();
-
-          // Calculate height guidance from fontHeightTable
-          if (unit.includes('g') || unit.includes('ml') || unit.includes('l')) {
-            if (valueNum <= 200 && !unit.includes('kg') && !unit.includes('l')) {
-              guidanceNote = "Net Qty ≤ 200g/ml → Min statutory font height: ≥ 1.0 mm (≥ 2.0 mm if molded/blown)";
-            } else if ((valueNum > 200 && valueNum <= 500) || unit.includes('kg') || unit.includes('l')) {
-              guidanceNote = "Net Qty 200g-500g/ml → Min statutory font height: ≥ 2.0 mm (≥ 4.0 mm if molded/blown)";
-            } else {
-              guidanceNote = "Net Qty > 500g/ml → Min statutory font height: ≥ 4.0 mm (≥ 6.0 mm if molded/blown)";
-            }
-          } else {
-            guidanceNote = "Standard count units detected → Min statutory height: ≥ 2.0 mm";
-          }
+          matchedText = fields.netQuantity.value;
+          matchedBboxes = findMatchingBboxes(/(net|quantity|qty|wt|weight|volume|unit|units|piece|pieces)/i);
+          guidanceNote = 'Net quantity detected with contextual label support.';
         } else {
           status = 'fail';
+          guidanceNote = 'No net quantity declaration with contextual evidence found.';
         }
         break;
       }
-
       case 'MRP': {
-        const mrpRegex = /(₹|rs\.?|inr|mrp)\s?[:\-]?\s?\d+(\.\d{1,2})?/i;
-        const mrpMatch = cleanText.match(mrpRegex);
-
-        if (mrpMatch) {
+        if (fields.mrp.value) {
           status = 'pass';
-          matchedText = mrpMatch[0];
-          matchedBboxes = findMatchingBboxes(mrpRegex);
-
-          const taxPhraseRegex = /inclusive\s+of\s+all\s+taxes/i;
-          if (!taxPhraseRegex.test(cleanText)) {
-            warning = "Soft Check Warning: Mandatory phrase 'inclusive of all taxes' not found nearby.";
+          matchedText = fields.mrp.value;
+          matchedBboxes = findMatchingBboxes(/(mrp|maximum|retail|price|₹|rs|inr)/i);
+          if (!/inclusive\s+of\s+all\s+taxes/i.test(cleanText)) {
+            warning = "Soft check: 'Inclusive of all taxes' phrase is absent from the nearby declaration text.";
           }
-          guidanceNote = "Max Retail Price declaration present. Check for decimal representation accuracy.";
+          guidanceNote = 'MRP was detected with contextual evidence; confirm the exact value and tax phrase during manual review.';
         } else {
           status = 'fail';
+          guidanceNote = 'MRP declaration not confidently detected from OCR evidence.';
         }
         break;
       }
-
       case 'MFG_DATE': {
-        const dateRegex1 = /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*[\s\-/]?\d{2,4}/i;
-        const dateRegex2 = /\b(0[1-9]|1[0-2])[\/\-]\d{2,4}\b/;
-        const dateMatch = cleanText.match(dateRegex1) || cleanText.match(dateRegex2);
-
-        if (dateMatch) {
+        if (fields.manufacturingDate.value) {
           status = 'pass';
-          matchedText = dateMatch[0];
-          matchedBboxes = [...findMatchingBboxes(dateRegex1), ...findMatchingBboxes(dateRegex2)];
+          matchedText = fields.manufacturingDate.value;
+          matchedBboxes = findMatchingBboxes(/(manufacture|manufactured|packed|packing|imported|jun|jan|feb|mar|apr|may|jul|aug|sep|oct|nov|dec)/i);
+          guidanceNote = 'Manufacture/packing/import date detected with contextual label support.';
         } else {
           status = 'fail';
+          guidanceNote = 'Manufacturing or packing month/year declaration was not confidently found.';
         }
         break;
       }
-
       case 'CONSUMER_CARE': {
-        const phoneRegex = /\b(?:\+91[\-\s]?)?[6-9]\d{9}\b/;
-        const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
-        const phoneMatch = cleanText.match(phoneRegex);
-        const emailMatch = cleanText.match(emailRegex);
-
-        if (phoneMatch || emailMatch) {
+        if (fields.consumerCarePhone.value || fields.consumerCareEmail.value) {
           status = 'pass';
-          const parts = [];
-          if (phoneMatch) parts.push(`Tel: ${phoneMatch[0]}`);
-          if (emailMatch) parts.push(`Email: ${emailMatch[0]}`);
-          matchedText = parts.join(' | ');
-          matchedBboxes = [...findMatchingBboxes(phoneRegex), ...findMatchingBboxes(emailRegex)];
+          matchedText = [fields.consumerCarePhone.value, fields.consumerCareEmail.value].filter(Boolean).join(' | ');
+          matchedBboxes = findMatchingBboxes(/(customer|consumer|care|complaint|contact|helpline|@|1800|\+91)/i);
+          guidanceNote = 'Consumer care evidence was detected; completeness should still be reviewed with the label text.';
         } else {
           status = 'fail';
+          guidanceNote = 'Consumer care phone/email not found with adequate evidence.';
         }
         break;
       }
-
       case 'COUNTRY_OF_ORIGIN': {
         if (!context.isImported) {
           status = 'pass';
-          matchedText = "Not Applicable (Domestic Pack)";
-          guidanceNote = "Domestic declaration exemption applies.";
+          matchedText = 'Not applicable for domestic package';
+          guidanceNote = 'Domestic package exemption applies.';
+        } else if (fields.countryOfOrigin.value) {
+          status = 'pass';
+          matchedText = fields.countryOfOrigin.value;
+          matchedBboxes = findMatchingBboxes(/(country|origin|made|china|india)/i);
+          guidanceNote = 'Country of origin declaration found for imported package.';
         } else {
-          const originRegex = /(country of origin|made in|product of)\s*[:\-]?\s*([a-zA-Z\s]+)/i;
-          const originMatch = cleanText.match(originRegex);
-          if (originMatch) {
-            status = 'pass';
-            matchedText = originMatch[0];
-            matchedBboxes = findMatchingBboxes(/(made|origin|product)/i);
-          } else {
-            status = 'fail';
-          }
+          status = 'fail';
+          guidanceNote = 'Country of origin declaration is required for an imported package and is missing or uncertain.';
         }
         break;
       }
@@ -194,9 +146,9 @@ export function validateRuleEngine(
     });
   });
 
-  const passCount = results.filter(r => r.status === 'pass').length;
-  const failCount = results.filter(r => r.status === 'fail').length;
-  const reviewCount = results.filter(r => r.status === 'manual_review').length;
+  const passCount = results.filter((r) => r.status === 'pass').length;
+  const failCount = results.filter((r) => r.status === 'fail').length;
+  const reviewCount = results.filter((r) => r.status === 'manual_review').length;
 
   let overallStatus: 'Compliant' | 'Non-Compliant' | 'Needs Review' = 'Compliant';
   if (failCount > 0) {
@@ -208,8 +160,8 @@ export function validateRuleEngine(
   return {
     id: `SCAN-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     timestamp: new Date().toISOString(),
-    productName: detectedProductName || "Packaged Product",
-    manufacturerName: detectedManufacturer || "Packer / Manufacturer",
+    productName: commodityName,
+    manufacturerName: manufacturer,
     isImported: context.isImported,
     imageUrl: context.imageUrl || '',
     imageDimensions: context.imageDimensions,

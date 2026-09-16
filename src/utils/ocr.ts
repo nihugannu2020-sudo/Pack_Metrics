@@ -1,9 +1,10 @@
-import { createWorker } from 'tesseract.js';
+import { performAdvancedOCR } from '../services/ocr/ocrPipeline';
 import type { OCRWord } from '../types';
 
 export interface OCRResult {
   text: string;
   words: OCRWord[];
+  document?: { text: string; words: OCRWord[]; averageConfidence?: number };
 }
 
 export async function performOCR(
@@ -11,53 +12,43 @@ export async function performOCR(
   fallbackData?: { text: string; words: OCRWord[] },
   onProgress?: (progress: number, status: string) => void
 ): Promise<OCRResult> {
-  if (onProgress) onProgress(10, 'Initializing OCR Engine...');
+  if (onProgress) onProgress(5, 'Initializing multi-pass OCR pipeline...');
 
   try {
-    // Attempt Tesseract.js browser OCR with eng + hin
-    if (onProgress) onProgress(25, 'Loading English & Hindi language models...');
-    const worker = await createWorker(['eng', 'hin']);
-
-    if (onProgress) onProgress(50, 'Analyzing package label image...');
-    const ret = await worker.recognize(imageSource);
-    
-    if (onProgress) onProgress(90, 'Extracting text bounding boxes...');
-    await worker.terminate();
-
-    const text = ret.data.text;
-    const rawWords = (ret.data as any).words || [];
-    const words: OCRWord[] = rawWords.map((w: any) => ({
-      text: w.text,
+    const doc = await performAdvancedOCR(imageSource);
+    const words: OCRWord[] = doc.words.map((word) => ({
+      text: word.text,
       bbox: {
-        x0: w.bbox ? w.bbox.x0 : 0,
-        y0: w.bbox ? w.bbox.y0 : 0,
-        x1: w.bbox ? w.bbox.x1 : 0,
-        y1: w.bbox ? w.bbox.y1 : 0,
+        x0: word.bbox.x0,
+        y0: word.bbox.y0,
+        x1: word.bbox.x1,
+        y1: word.bbox.y1,
       },
-      confidence: w.confidence || 0,
+      confidence: word.confidence,
     }));
 
     if (onProgress) onProgress(100, 'OCR Complete');
 
-    // If Tesseract extracted meaningful text, return it
-    if (text && text.trim().length > 10) {
-      return { text, words };
-    }
+    const finalText = doc.text && doc.text.trim().length > 0 ? doc.text : fallbackData?.text || '';
+    const finalWords = words.length > 0 ? words : fallbackData?.words || [];
 
-    // If Tesseract produced empty text (e.g. mock canvas CORS/dataUrl) and fallback is available
-    if (fallbackData) {
-      return fallbackData;
-    }
-
-    return { text: text || '', words: words || [] };
+    return {
+      text: finalText,
+      words: finalWords,
+      document: {
+        text: finalText,
+        words: finalWords,
+        averageConfidence: doc.averageConfidence,
+      },
+    };
   } catch (error) {
-    console.warn('Tesseract OCR fallback triggered:', error);
+    console.warn('Advanced OCR pipeline failed; using fallback path:', error);
     if (onProgress) onProgress(100, 'Completed with pre-calculated OCR pipeline');
-    
+
     if (fallbackData) {
       return fallbackData;
     }
-    
+
     throw error;
   }
 }

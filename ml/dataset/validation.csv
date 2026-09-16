@@ -1,0 +1,15 @@
+text,label
+"Maximum Retail Price ₹249.00",MRP
+"Mfd by ABC Foods Pvt Ltd",MANUFACTURER
+"Marketed by FreshNest Retail",MANUFACTURER
+"Net contents 250 ml",NET_QUANTITY
+"Packed on 08/2025",MFG_DATE
+"Country of Origin: China",COUNTRY_OF_ORIGIN
+"Bluetooth LE 5.4",TECHNICAL_SPECIFICATION
+"Model Number: X7A-100",MODEL_NUMBER
+"Phone: +91 98765 43210",PHONE
+"support@example.in",EMAIL
+"This pack includes free shipping",MARKETING_TEXT
+"Website: www.brand.in",WEBSITE
+"Duration 24 months",OTHER
+"5200 mAh battery",TECHNICAL_SPECIFICATION

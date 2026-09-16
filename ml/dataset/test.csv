@@ -1,0 +1,14 @@
+text,label
+"Maximum Retail Price 19,999.00 inclusive of all taxes",MRP
+"Manufactured by Harman International",MANUFACTURER
+"Net quantity 1 unit",NET_QUANTITY
+"MFG: Jun 2026",MFG_DATE
+"Customer care: help@brand.in",CONSUMER_CARE
+"Bluetooth 5.0",TECHNICAL_SPECIFICATION
+"Model A123",MODEL_NUMBER
+"EAN 1234567890123",EAN_BARCODE
+"Random code 893487",RANDOM_NUMBER
+"Only warranty 18 months",WARRANTY
+"Address 10, Park Street, Kolkata 700001",ADDRESS
+"5000 mAh",TECHNICAL_SPECIFICATION
+"Best Before: 03/2028",BEST_BEFORE
