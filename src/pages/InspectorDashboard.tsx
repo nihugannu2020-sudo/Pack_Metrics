@@ -5,6 +5,7 @@ import { validateRuleEngine } from '../utils/ruleEngine';
 import { BoundingBoxCanvas } from '../components/BoundingBoxCanvas';
 import { NoticeModal } from '../components/NoticeModal';
 import { DB } from '../utils/db';
+import { API } from '../services/api';
 import { readFileAsDataUrl, stitchImages } from '../utils/file';
 import { Upload, CheckCircle2, XCircle, AlertTriangle, FileText, Eye, Info, Sparkles, Filter, ClipboardCheck, Loader2, AlertCircle, ScanLine, Search, Send } from 'lucide-react';
 
@@ -71,7 +72,7 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
       
       // Async fetch AI explanations
       setIsExplaining(true);
-      API.getExplanations(inspectorReport).then((explanations) => {
+      API.getExplanations(inspectorReport).then((explanations: Record<string, string>) => {
         const updatedResults = inspectorReport.results.map(r => ({
           ...r,
           aiExplanation: explanations[r.ruleId]
