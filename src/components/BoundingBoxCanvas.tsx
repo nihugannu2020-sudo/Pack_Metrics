@@ -75,9 +75,9 @@ export const BoundingBoxCanvas: React.FC<BoundingBoxCanvasProps> = ({ report, is
 
   if (isScanning) {
     return (
-      <div className="flex flex-col items-center justify-center h-80 bg-navy-50/50 rounded-xl border-2 border-dashed border-navy-100 p-8 text-center animate-pulse">
-        <div className="w-12 h-12 border-4 border-saffron border-t-transparent rounded-full animate-spin mb-4"></div>
-        <h4 className="font-semibold text-navy-900 text-lg">Running Optical Character Recognition</h4>
+      <div className="flex flex-col items-center justify-center h-80 bg-teal-50/50 rounded-xl border-2 border-dashed border-teal-100 p-8 text-center animate-pulse">
+        <div className="w-12 h-12 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <h4 className="font-semibold text-teal-900 text-lg">Running Optical Character Recognition</h4>
         <p className="text-sm text-slate-600 mt-1">Analyzing package typography & validating against Legal Metrology Rules 2011...</p>
       </div>
     );
@@ -86,10 +86,10 @@ export const BoundingBoxCanvas: React.FC<BoundingBoxCanvasProps> = ({ report, is
   if (!report) {
     return (
       <div className="flex flex-col items-center justify-center h-80 bg-white rounded-xl border border-slate-200 p-8 text-center shadow-sm">
-        <div className="w-16 h-16 bg-navy-50 rounded-full flex items-center justify-center mb-4 text-navy-900">
-          <ShieldAlert className="w-8 h-8 text-saffron" />
+        <div className="w-16 h-16 bg-teal-50 rounded-full flex items-center justify-center mb-4 text-teal-900">
+          <ShieldAlert className="w-8 h-8 text-teal-600" />
         </div>
-        <h4 className="font-semibold text-navy-900 text-lg">No Package Selected</h4>
+        <h4 className="font-semibold text-teal-900 text-lg">No Package Selected</h4>
         <p className="text-sm text-slate-500 max-w-sm mt-1">
           Select a sample preset label from the gallery on the left or upload a package photo to analyze compliance.
         </p>
@@ -104,7 +104,7 @@ export const BoundingBoxCanvas: React.FC<BoundingBoxCanvasProps> = ({ report, is
       {/* Visual Canvas Overlay Card */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-navy-900 text-sm flex items-center gap-2">
+          <h3 className="font-semibold text-teal-900 text-sm flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-compliant inline-block"></span>
             Extracted Text & Bounding Box Overlay
           </h3>

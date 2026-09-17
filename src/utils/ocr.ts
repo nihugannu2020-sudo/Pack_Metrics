@@ -1,4 +1,4 @@
-import { performAdvancedOCR } from '../services/ocr/ocrPipeline';
+import { API } from '../services/api';
 import type { OCRWord } from '../types';
 
 export interface OCRResult {
@@ -12,41 +12,38 @@ export async function performOCR(
   fallbackData?: { text: string; words: OCRWord[] },
   onProgress?: (progress: number, status: string) => void
 ): Promise<OCRResult> {
-  if (onProgress) onProgress(5, 'Initializing multi-pass OCR pipeline...');
+  if (onProgress) onProgress(10, 'Sending image to AI OCR backend...');
 
   try {
-    const doc = await performAdvancedOCR(imageSource);
-    const words: OCRWord[] = doc.words.map((word) => ({
-      text: word.text,
-      bbox: {
-        x0: word.bbox.x0,
-        y0: word.bbox.y0,
-        x1: word.bbox.x1,
-        y1: word.bbox.y1,
-      },
-      confidence: word.confidence,
-    }));
+    // If it's a File, we need to convert it to Data URL first
+    let imageUrl = '';
+    if (typeof imageSource === 'string') {
+      imageUrl = imageSource;
+    } else {
+      const reader = new FileReader();
+      imageUrl = await new Promise((resolve, reject) => {
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = reject;
+        reader.readAsDataURL(imageSource);
+      });
+    }
 
-    if (onProgress) onProgress(100, 'OCR Complete');
+    if (onProgress) onProgress(50, 'Extracting text using AI model...');
+    
+    const backendResult = await API.runOCR(imageUrl);
 
-    const finalText = doc.text && doc.text.trim().length > 0 ? doc.text : fallbackData?.text || '';
-    const finalWords = words.length > 0 ? words : fallbackData?.words || [];
+    if (onProgress) onProgress(100, 'AI OCR Complete');
 
     return {
-      text: finalText,
-      words: finalWords,
-      document: {
-        text: finalText,
-        words: finalWords,
-        averageConfidence: doc.averageConfidence,
-      },
+      text: backendResult.text,
+      words: backendResult.words || [],
     };
   } catch (error) {
-    console.warn('Advanced OCR pipeline failed; using fallback path:', error);
-    if (onProgress) onProgress(100, 'Completed with pre-calculated OCR pipeline');
+    console.error('AI OCR pipeline error:', error);
+    if (onProgress) onProgress(100, 'Error: Fallback to synthetic data');
 
     if (fallbackData) {
-      return fallbackData;
+      return { text: fallbackData.text, words: fallbackData.words };
     }
 
     throw error;

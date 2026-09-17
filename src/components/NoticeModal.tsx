@@ -38,8 +38,8 @@ export const NoticeModal: React.FC<NoticeModalProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-lg font-bold font-serif-heading text-navy-900">Official Show-Cause Notice</h3>
-                <span className="text-xs font-mono font-bold bg-navy-100 text-navy-900 px-2 py-0.5 rounded border border-navy-200">
+                <h3 className="text-lg font-bold font-heading text-teal-900">Official Show-Cause Notice</h3>
+                <span className="text-xs font-mono font-bold bg-teal-100 text-teal-900 px-2 py-0.5 rounded border border-navy-200">
                   {noticeObj.noticeNumber}
                 </span>
               </div>
@@ -84,9 +84,9 @@ export const NoticeModal: React.FC<NoticeModalProps> = ({
             </button>
             <button
               onClick={handleDownload}
-              className="px-5 py-2 text-xs font-bold text-white bg-navy-900 hover:bg-navy-800 rounded-lg shadow flex items-center gap-2 transition"
+              className="px-5 py-2 text-xs font-bold text-white bg-teal-900 hover:bg-teal-900 rounded-lg shadow flex items-center gap-2 transition"
             >
-              <Download className="w-4 h-4 text-saffron" />
+              <Download className="w-4 h-4 text-teal-600" />
               <span>Download Signed Notice (PDF)</span>
             </button>
           </div>

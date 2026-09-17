@@ -52,7 +52,7 @@ export function App() {
     : currentRole;
 
   return (
-    <div className="min-h-screen bg-cream text-navy-900 flex flex-col font-sans">
+    <div className="min-h-screen bg-ivory text-teal-900 flex flex-col font-sans">
       {/* Top Navbar */}
       <Navbar
         currentRole={currentRole}

@@ -5,8 +5,8 @@ import { validateRuleEngine } from '../utils/ruleEngine';
 import { BoundingBoxCanvas } from '../components/BoundingBoxCanvas';
 import { NoticeModal } from '../components/NoticeModal';
 import { DB } from '../utils/db';
-import { readFileAsDataUrl } from '../utils/file';
-import { Upload, CheckCircle2, XCircle, AlertTriangle, FileText, Eye, Info, Sparkles, Filter, ClipboardCheck } from 'lucide-react';
+import { readFileAsDataUrl, stitchImages } from '../utils/file';
+import { Upload, CheckCircle2, XCircle, AlertTriangle, FileText, Eye, Info, Sparkles, Filter, ClipboardCheck, Loader2, AlertCircle, ScanLine, Search, Send } from 'lucide-react';
 
 interface InspectorDashboardProps {
   officerName: string;
@@ -17,6 +17,7 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
   
   const [currentReport, setCurrentReport] = useState<ComplianceReport | null>(null);
   const [isScanning, setIsScanning] = useState<boolean>(false);
+  const [isExplaining, setIsExplaining] = useState<boolean>(false);
   const [ocrProgress, setOcrProgress] = useState<number>(0);
   const [ocrStatusText, setOcrStatusText] = useState<string>('');
   
@@ -39,23 +40,23 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
 
   const handleCustomFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    const file = files[0];
-    if (!file) return;
+    if (files.length === 0) return;
 
     const imageUrls = await Promise.all(files.map(readFileAsDataUrl));
-    const imageUrl = imageUrls[0];
+    const mergedImageUrl = await stitchImages(imageUrls);
+    
     setCustomFilePreviews(imageUrls);
     setIsScanning(true);
 
     try {
-      const ocrResult = await performOCR(file, undefined, (progress, status) => {
+      const ocrResult = await performOCR(mergedImageUrl, undefined, (progress, status) => {
         setOcrProgress(progress);
         setOcrStatusText(status);
       });
 
       const report = validateRuleEngine(ocrResult.text, ocrResult.words, {
         isImported,
-        imageUrl,
+        imageUrl: mergedImageUrl,
       });
       report.imageUrls = imageUrls;
 
@@ -67,6 +68,20 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
       setCurrentReport(inspectorReport);
       DB.saveScan(inspectorReport);
       setScanHistory(DB.getScans());
+      
+      // Async fetch AI explanations
+      setIsExplaining(true);
+      API.getExplanations(inspectorReport).then((explanations) => {
+        const updatedResults = inspectorReport.results.map(r => ({
+          ...r,
+          aiExplanation: explanations[r.ruleId]
+        }));
+        const updatedReport = { ...inspectorReport, results: updatedResults };
+        setCurrentReport(updatedReport);
+        DB.updateScan(updatedReport);
+        setScanHistory(DB.getScans());
+      }).catch(console.error).finally(() => setIsExplaining(false));
+
     } catch (err) {
       console.error('Custom file scan error:', err);
     } finally {
@@ -145,14 +160,14 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Officer Welcome Banner */}
-      <div className="bg-white text-navy-900 rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white text-teal-900 rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-saffron animate-pulse"></span>
-            <h1 className="text-2xl font-bold font-serif-heading">Field Inspection Dashboard</h1>
+            <span className="w-2.5 h-2.5 rounded-full bg-teal-600 animate-pulse"></span>
+            <h1 className="text-2xl font-bold font-heading">Field Inspection Dashboard</h1>
           </div>
           <p className="text-xs text-slate-300 mt-1">
-            Logged in as <strong className="text-saffron">{officerName}</strong> • Legal Metrology Inspection Portal
+            Logged in as <strong className="text-teal-600">{officerName}</strong> • Legal Metrology Inspection Portal
           </p>
         </div>
 
@@ -171,7 +186,7 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
                   setCurrentReport(updated);
                 }
               }}
-              className="accent-saffron w-4 h-4"
+              className="accent-teal-500 w-4 h-4"
             />
             <span>Imported Package Flag (Rule 6(1) Country of Origin)</span>
           </label>
@@ -183,14 +198,14 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
         
         {/* Left Column: Sample Gallery & Upload (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-            <h2 className="text-base font-bold font-serif-heading text-navy-900 mb-3 flex items-center justify-between">
+          <div className="glass-panel p-5 transition-all duration-300 hover:shadow-md">
+            <h2 className="text-base font-bold font-heading text-teal-900 mb-3 flex items-center justify-between">
               <span>Upload Package Label</span>
-              <Sparkles className="w-4 h-4 text-saffron" />
+              <Sparkles className="w-4 h-4 text-teal-600" />
             </h2>
 
             <div className="space-y-4">
-                <div className="border-2 border-dashed border-slate-300 hover:border-saffron rounded-xl p-6 text-center cursor-pointer bg-slate-50 hover:bg-saffron-50/20 transition relative">
+                <div className="border-2 border-dashed border-slate-300 hover:border-teal-500 rounded-xl p-6 text-center cursor-pointer bg-slate-50 hover:bg-teal-50/20 transition relative">
                   <input
                     type="file"
                     accept="image/*"
@@ -198,8 +213,8 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
                     onChange={handleCustomFileUpload}
                     className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                   />
-                  <Upload className="w-8 h-8 text-saffron mx-auto mb-2" />
-                  <h4 className="font-bold text-navy-900 text-sm">Upload Package Photo</h4>
+                  <Upload className="w-8 h-8 text-teal-600 mx-auto mb-2" />
+                  <h4 className="font-bold text-teal-900 text-sm">Upload Package Photo</h4>
                   <p className="text-xs text-slate-500 mt-1">PNG, JPG, WEBP formats up to 10MB</p>
                 </div>
 
@@ -216,35 +231,64 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
           {/* OCR Progress Bar if running */}
           {isScanning && (
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2">
-              <div className="flex justify-between text-xs font-semibold text-navy-900">
+              <div className="flex justify-between text-xs font-semibold text-teal-900">
                 <span>{ocrStatusText || 'Extracting OCR Text...'}</span>
                 <span>{ocrProgress}%</span>
               </div>
               <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
                 <div
-                  className="bg-saffron h-2 transition-all duration-300 rounded-full"
+                  className="bg-teal-600 h-2 transition-all duration-300 rounded-full"
                   style={{ width: `${ocrProgress}%` }}
                 ></div>
               </div>
             </div>
           )}
 
-          {/* Extracted Raw OCR Text Box */}
-          {currentReport && (
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                <span className="text-xs font-bold text-navy-900 uppercase tracking-wider">
-                  Raw Tesseract OCR Text Output
-                </span>
-                <span className="text-[10px] text-slate-400 font-mono">
-                  {currentReport.words.length} Tokens
-                </span>
+          {/* How it Works / Instructions */}
+          {!isScanning && !currentReport && (
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <h3 className="font-bold text-teal-900 font-heading text-sm uppercase tracking-wider">How to Audit</h3>
+              <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-200 before:to-transparent">
+                <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-teal-100 text-teal-600 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
+                    <ScanLine className="w-4 h-4" />
+                  </div>
+                  <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-slate-50 p-3 rounded-xl border border-slate-100 shadow-sm">
+                    <h4 className="font-bold text-teal-900 text-xs">1. Scan Image</h4>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Upload a clear photo of the packaging.</p>
+                  </div>
+                </div>
+                <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-teal-100 text-teal-600 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
+                    <Search className="w-4 h-4" />
+                  </div>
+                  <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-slate-50 p-3 rounded-xl border border-slate-100 shadow-sm">
+                    <h4 className="font-bold text-teal-900 text-xs">2. AI Checking</h4>
+                    <p className="text-[10px] text-slate-500 mt-0.5">AI extracts text and checks compliance.</p>
+                  </div>
+                </div>
+                <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-teal-100 text-teal-600 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
+                    <CheckCircle2 className="w-4 h-4" />
+                  </div>
+                  <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-slate-50 p-3 rounded-xl border border-slate-100 shadow-sm">
+                    <h4 className="font-bold text-teal-900 text-xs">3. Verify Results</h4>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Review the generated checklist report.</p>
+                  </div>
+                </div>
+                <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-teal-100 text-teal-600 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
+                    <Send className="w-4 h-4" />
+                  </div>
+                  <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-slate-50 p-3 rounded-xl border border-slate-100 shadow-sm">
+                    <h4 className="font-bold text-teal-900 text-xs">4. Submit Notice</h4>
+                    <p className="text-[10px] text-slate-500 mt-0.5">File complaints for rule violations.</p>
+                  </div>
+                </div>
               </div>
-              <pre className="p-3 bg-slate-900 text-emerald-400 rounded-xl text-[11px] font-mono whitespace-pre-wrap max-h-36 overflow-y-auto">
-                {currentReport.extractedText || 'No text extracted.'}
-              </pre>
             </div>
           )}
+
         </div>
 
         {/* Right Column: Canvas Bounding Box Overlay & Compliance Checklist (7 cols) */}
@@ -255,53 +299,63 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
 
           {/* Compliance Summary Bar & Action Button */}
           {currentReport && (
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-500 font-mono">Inspection ID: {currentReport.id}</span>
-                    <span
-                      className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
-                        currentReport.overallStatus === 'Compliant'
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : 'bg-red-100 text-red-800'
+            <div className="glass-panel p-5 transition-all duration-300 hover:shadow-md space-y-4">
+              <div className="flex flex-col gap-6 border-b border-slate-100 pb-6">
+                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="text-xs font-medium text-slate-500 font-mono bg-slate-100 px-3 py-1 rounded-md">
+                        ID: {currentReport.id}
+                      </span>
+                      <span
+                        className={`text-xs font-bold px-3 py-1 rounded-full border ${
+                          currentReport.overallStatus === 'Compliant'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : 'bg-red-50 text-red-700 border-red-200'
+                        }`}
+                      >
+                        {currentReport.overallStatus.toUpperCase()}
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <h3 className="text-2xl font-bold text-teal-900 font-heading leading-tight">
+                        {currentReport.productName.replace(/^:\s*/, '')}
+                      </h3>
+                      <p className="text-sm text-slate-600 flex items-center gap-1.5">
+                        <span className="font-semibold text-teal-800">Manufacturer:</span> 
+                        {currentReport.manufacturerName.replace(/^:\s*/, '')}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-row md:flex-col lg:flex-row items-center gap-3 w-full md:w-auto">
+                    <button
+                      onClick={() => reportSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                      className="w-full md:w-auto px-5 py-2.5 rounded-xl border-2 border-slate-200 text-teal-900 hover:border-teal-500 hover:bg-teal-50 font-bold text-sm flex items-center justify-center gap-2 transition"
+                    >
+                      <Eye className="w-4 h-4" />
+                      <span>View Report</span>
+                    </button>
+                    <button
+                      disabled={currentReport.failCount === 0}
+                      onClick={() => setIsNoticeModalOpen(true)}
+                      className={`w-full md:w-auto px-5 py-2.5 rounded-xl font-bold text-sm shadow-md flex items-center justify-center gap-2 transition ${
+                        currentReport.failCount > 0
+                          ? 'bg-red-600 text-white hover:bg-red-700 cursor-pointer animate-pulse'
+                          : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200 shadow-none'
                       }`}
                     >
-                      {currentReport.overallStatus.toUpperCase()}
-                    </span>
+                      <FileText className="w-4 h-4" />
+                      <span>File a Complaint</span>
+                    </button>
                   </div>
-                  <h3 className="text-lg font-bold text-navy-900 font-serif-heading mt-1">
-                    {currentReport.productName}
-                  </h3>
-                  <p className="text-xs text-slate-600">{currentReport.manufacturerName}</p>
-                </div>
-
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                  <button
-                    onClick={() => reportSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-                    className="px-4 py-2.5 rounded-xl border border-slate-200 text-navy-900 hover:bg-slate-50 font-bold text-xs flex items-center justify-center gap-2 transition"
-                  >
-                    <Eye className="w-4 h-4" />
-                    <span>View Report</span>
-                  </button>
-                  <button
-                    disabled={currentReport.failCount === 0}
-                    onClick={() => setIsNoticeModalOpen(true)}
-                    className={`px-4 py-2.5 rounded-xl font-bold text-xs shadow flex items-center justify-center gap-2 transition ${
-                      currentReport.failCount > 0
-                        ? 'bg-violation text-white hover:bg-red-700 cursor-pointer animate-pulse'
-                        : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
-                    }`}
-                  >
-                    <FileText className="w-4 h-4" />
-                    <span>File a Complaint</span>
-                  </button>
                 </div>
               </div>
 
               {/* Statutory Compliance Checklist Table */}
               <div>
-                <h4 className="text-xs font-bold text-navy-900 uppercase tracking-wider mb-3">
+                <h4 className="text-xs font-bold text-teal-900 uppercase tracking-wider mb-3">
                   Rule 6 Statutory Declaration Checklist
                 </h4>
 
@@ -323,18 +377,42 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
 
                             <div>
                               <div className="flex items-center gap-2">
-                                <span className="font-mono text-[10px] font-bold bg-navy-50 text-navy-900 px-1.5 py-0.5 rounded border border-navy-100">
+                                <span className="font-mono text-[10px] font-bold bg-teal-50 text-teal-900 px-1.5 py-0.5 rounded border border-teal-100">
                                   {result.legalRef}
                                 </span>
-                                <h5 className="font-bold text-navy-900 text-xs">{result.title}</h5>
+                                <h5 className="font-bold text-teal-900 text-xs">{result.title}</h5>
                               </div>
                               
-                              {(result.matchedText || result.warning || result.guidanceNote) && (
-                                <details className="mt-2 text-[11px] text-slate-600">
-                                  <summary className="cursor-pointer font-semibold text-slate-500">View evidence and guidance</summary>
-                                  {result.matchedText && <p className="mt-2"><strong>Matched text:</strong> <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded">{result.matchedText}</span></p>}
-                                  {result.warning && <p className="mt-1 text-amber-700">{result.warning}</p>}
-                                  {result.guidanceNote && <p className="mt-1 italic">{result.guidanceNote}</p>}
+                              {(result.matchedText || result.warning || result.guidanceNote || isExplaining || result.aiExplanation) && (
+                                <details className="mt-3 group">
+                                  <summary className="cursor-pointer font-semibold text-slate-500 text-[11px] list-none flex items-center gap-1.5 transition-colors group-hover:text-indigo-600">
+                                    <Sparkles className="w-3 h-3 text-indigo-500" />
+                                    <span>AI Explanation & Details</span>
+                                  </summary>
+                                  
+                                  <div className="mt-2.5 p-3 rounded-lg bg-indigo-50/50 border border-indigo-100/50 space-y-2.5 text-xs">
+                                    {isExplaining && !result.aiExplanation && (
+                                      <div className="flex items-center gap-2 text-indigo-600 font-medium">
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        Generating AI Insights...
+                                      </div>
+                                    )}
+                                    {result.aiExplanation && (
+                                      <div className="text-slate-700 leading-relaxed border-b border-indigo-100/50 pb-2.5">
+                                        <span className="font-semibold text-indigo-900 block mb-1">AI Assessment:</span>
+                                        {result.aiExplanation}
+                                      </div>
+                                    )}
+                                    
+                                    {result.matchedText && (
+                                      <p className="text-slate-600">
+                                        <strong className="text-slate-700">Matched Evidence:</strong>{' '}
+                                        <span className="font-mono bg-white px-1.5 py-0.5 rounded shadow-sm border border-slate-100">{result.matchedText}</span>
+                                      </p>
+                                    )}
+                                    {result.warning && <p className="text-amber-700 flex items-start gap-1.5"><AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0"/>{result.warning}</p>}
+                                    {result.guidanceNote && <p className="text-slate-500 italic"><span className="font-semibold text-slate-600">Rule Guidance:</span> {result.guidanceNote}</p>}
+                                  </div>
                                 </details>
                               )}
                             </div>
@@ -360,7 +438,7 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
 
               {/* Honest Scoping Limitation Footnote */}
               <div className="flex items-start gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200 text-[11px] text-slate-600">
-                <Info className="w-4 h-4 text-navy-900 flex-shrink-0 mt-0.5" />
+                <Info className="w-4 h-4 text-teal-900 flex-shrink-0 mt-0.5" />
                 <span>
                   <strong>Prototype Guidance Note:</strong> Measuring physical numeral height in millimeters requires a calibrated camera reference target. PackMetrics displays statutory minimum height requirements next to detected Net Qty/MRP values rather than claiming uncalibrated camera measurements.
                 </span>
@@ -375,8 +453,8 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
         <div className="bg-white p-6 rounded-2xl border border-amber-200 shadow-sm space-y-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h3 className="font-bold font-serif-heading text-navy-900 text-lg flex items-center gap-2">
-                <ClipboardCheck className="w-5 h-5 text-saffron" />
+              <h3 className="font-bold font-heading text-teal-900 text-lg flex items-center gap-2">
+                <ClipboardCheck className="w-5 h-5 text-teal-600" />
                 Manufacturer Reports Awaiting Approval
               </h3>
               <p className="text-xs text-slate-500 mt-1">Review self-audit evidence before accepting it into the inspection record.</p>
@@ -389,14 +467,14 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
               <div key={report.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-bold text-navy-900">{report.id}</span>
+                    <span className="font-mono text-xs font-bold text-teal-900">{report.id}</span>
                     <span className="text-[10px] text-slate-500">Submitted by {report.submittedBy || 'Manufacturer'}</span>
                   </div>
-                  <h4 className="font-bold text-sm text-navy-900 mt-1">{report.productName || 'Package label report'}</h4>
+                  <h4 className="font-bold text-sm text-teal-900 mt-1">{report.productName || 'Package label report'}</h4>
                   <p className="text-xs text-slate-600">{report.manufacturerName} • {report.passCount} pass / {report.failCount} fail / {report.reviewCount} review</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => { setCurrentReport(report); setSelectedSubmittedReport(report); }} className="px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-navy-900 hover:bg-slate-50 flex items-center gap-1.5">
+                  <button onClick={() => { setCurrentReport(report); setSelectedSubmittedReport(report); }} className="px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-teal-900 hover:bg-slate-50 flex items-center gap-1.5">
                     <Eye className="w-3.5 h-3.5" /> View
                   </button>
                   <button disabled={isReviewScanning} onClick={() => reviewManufacturerReport(report, 'rejected')} className="px-3 py-2 rounded-lg bg-red-100 text-red-800 text-xs font-bold hover:bg-red-200 disabled:opacity-50 flex items-center gap-1.5">
@@ -418,7 +496,7 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
               <div>
                 <p className="text-xs text-slate-500 font-mono">{selectedSubmittedReport.id}</p>
-                <h3 className="text-xl font-bold font-serif-heading text-navy-900 mt-1">Manufacturer Report Review</h3>
+                <h3 className="text-xl font-bold font-heading text-teal-900 mt-1">Manufacturer Report Review</h3>
                 <p className="text-xs text-slate-600 mt-1">
                   {selectedSubmittedReport.productName || 'Package label report'} • {selectedSubmittedReport.manufacturerName} • Submitted by {selectedSubmittedReport.submittedBy || 'Manufacturer'}
                 </p>
@@ -435,11 +513,11 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-5">
               <div>
                 <div className="flex items-center justify-between gap-3 mb-2">
-                  <h4 className="text-xs font-bold text-navy-900 uppercase tracking-wider">Shared package image</h4>
+                  <h4 className="text-xs font-bold text-teal-900 uppercase tracking-wider">Shared package image</h4>
                   <button
                     onClick={() => scanSubmittedReport(selectedSubmittedReport)}
                     disabled={isReviewScanning || !(selectedSubmittedReport.imageUrls?.length || selectedSubmittedReport.imageUrl)}
-                    className="px-3 py-1.5 rounded-lg bg-navy-900 text-white text-[11px] font-bold hover:bg-navy-800 disabled:opacity-50 flex items-center gap-1.5"
+                    className="px-3 py-1.5 rounded-lg bg-teal-900 text-white text-[11px] font-bold hover:bg-teal-900 disabled:opacity-50 flex items-center gap-1.5"
                   >
                     <Upload className="w-3.5 h-3.5" />
                     {isReviewScanning ? 'Scanning...' : 'Scan images'}
@@ -447,12 +525,12 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
                 </div>
                 {isReviewScanning && (
                   <div className="mb-3 p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                    <div className="flex justify-between text-[11px] font-semibold text-navy-900">
+                    <div className="flex justify-between text-[11px] font-semibold text-teal-900">
                       <span>{reviewScanStatus}</span>
                       <span>{reviewScanProgress}%</span>
                     </div>
                     <div className="h-1.5 rounded-full bg-slate-200 overflow-hidden">
-                      <div className="h-full bg-saffron transition-all" style={{ width: `${reviewScanProgress}%` }} />
+                      <div className="h-full bg-teal-600 transition-all" style={{ width: `${reviewScanProgress}%` }} />
                     </div>
                   </div>
                 )}
@@ -475,12 +553,12 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
               </div>
 
               <div>
-                <h4 className="text-xs font-bold text-navy-900 uppercase tracking-wider mb-2">Submitted compliance report</h4>
+                <h4 className="text-xs font-bold text-teal-900 uppercase tracking-wider mb-2">Submitted compliance report</h4>
                 <div className="space-y-2 border border-slate-200 rounded-xl overflow-hidden">
                   {selectedSubmittedReport.results.map(result => (
                     <div key={result.ruleId} className="p-3 border-b last:border-b-0 border-slate-100">
                       <div className="flex items-center justify-between gap-3">
-                        <span className="text-xs font-semibold text-navy-900">{result.title}</span>
+                        <span className="text-xs font-semibold text-teal-900">{result.title}</span>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${result.status === 'pass' ? 'bg-emerald-100 text-emerald-800' : result.status === 'fail' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'}`}>
                           {result.status.replace('_', ' ')}
                         </span>
@@ -493,7 +571,7 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
             </div>
 
             <div className="mt-5">
-              <h4 className="text-xs font-bold text-navy-900 uppercase tracking-wider mb-2">Extracted OCR text</h4>
+              <h4 className="text-xs font-bold text-teal-900 uppercase tracking-wider mb-2">Extracted OCR text</h4>
               <pre className="p-3 bg-slate-900 text-emerald-400 rounded-xl text-[11px] font-mono whitespace-pre-wrap max-h-40 overflow-y-auto">
                 {selectedSubmittedReport.extractedText || 'No OCR text extracted.'}
               </pre>
@@ -505,8 +583,8 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
       {/* Historical Scans Table */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-bold font-serif-heading text-navy-900 text-lg flex items-center gap-2">
-            <Filter className="w-4 h-4 text-saffron" />
+          <h3 className="font-bold font-heading text-teal-900 text-lg flex items-center gap-2">
+            <Filter className="w-4 h-4 text-teal-600" />
             <span>Persisted Inspection History Log</span>
           </h3>
           <span className="text-xs text-slate-500 font-mono">{scanHistory.length} Scans Saved</span>
@@ -528,7 +606,7 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
               {scanHistory.map((scan) => (
                 <tr key={scan.id} className="hover:bg-slate-50/80 transition">
                   <td className="p-3 font-mono">
-                    <span className="font-bold text-navy-900">{scan.id}</span>
+                    <span className="font-bold text-teal-900">{scan.id}</span>
                     <span className="block text-[10px] text-slate-400">
                       {new Date(scan.timestamp).toLocaleDateString('en-IN', {
                         day: '2-digit',
@@ -537,7 +615,7 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
                       })}
                     </span>
                   </td>
-                  <td className="p-3 font-semibold text-navy-900">{scan.productName}</td>
+                  <td className="p-3 font-semibold text-teal-900">{scan.productName}</td>
                   <td className="p-3 text-slate-600">{scan.manufacturerName}</td>
                   <td className="p-3">
                     <span className="text-emerald-700 font-bold">{scan.passCount} Pass</span> /{' '}
@@ -557,7 +635,7 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
                   <td className="p-3 text-right">
                     <button
                       onClick={() => setCurrentReport(scan)}
-                      className="text-xs text-saffron hover:text-saffron-700 font-bold flex items-center justify-end gap-1 ml-auto"
+                      className="text-xs text-teal-600 hover:text-teal-700 font-bold flex items-center justify-end gap-1 ml-auto"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       <span>View Report</span>

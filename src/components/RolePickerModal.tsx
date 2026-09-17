@@ -29,7 +29,7 @@ export const RolePickerModal: React.FC<RolePickerModalProps> = ({
       subtitle: 'Legal Metrology Officer',
       description: 'Perform live package label OCR scans, inspect statutory declarations, flag non-compliances, and generate legal notices.',
       icon: ShieldCheck,
-      badgeColor: 'border-saffron bg-saffron-50 text-saffron-700',
+      badgeColor: 'border-teal-500 bg-teal-50 text-teal-700',
     },
     {
       id: 'manufacturer' as UserRole,
@@ -37,7 +37,7 @@ export const RolePickerModal: React.FC<RolePickerModalProps> = ({
       subtitle: 'Industry Compliance Portal',
       description: 'Review compliance rate trends for your products, view flagged label scans, and acknowledge show-cause notices.',
       icon: Factory,
-      badgeColor: 'border-navy bg-navy-50 text-navy-900',
+      badgeColor: 'border-navy bg-teal-50 text-teal-900',
     },
     {
       id: 'admin' as UserRole,
@@ -56,14 +56,14 @@ export const RolePickerModal: React.FC<RolePickerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-950/70 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+      <div className="glass-panel max-w-2xl w-full p-6 overflow-hidden animate-slide-up">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
           <div>
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-saffron"></span>
-              <h2 className="text-xl font-bold font-serif-heading text-navy-900">Select User Persona</h2>
+              <span className="w-2.5 h-2.5 rounded-full bg-teal-600"></span>
+              <h2 className="text-xl font-bold font-heading text-teal-900">Select User Persona</h2>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
               Switch role to experience PackMetrics from different stakeholder perspectives.
@@ -79,8 +79,8 @@ export const RolePickerModal: React.FC<RolePickerModalProps> = ({
 
         {/* User Name Input */}
         <div className="mb-5">
-          <label className="block text-xs font-semibold text-navy-900 mb-1.5 flex items-center gap-1.5">
-            <User className="w-3.5 h-3.5 text-saffron" />
+          <label className="block text-xs font-semibold text-teal-900 mb-1.5 flex items-center gap-1.5">
+            <User className="w-3.5 h-3.5 text-teal-600" />
             Your Officer / User Name
           </label>
           <input
@@ -88,7 +88,7 @@ export const RolePickerModal: React.FC<RolePickerModalProps> = ({
             value={nameInput}
             onChange={(e) => setNameInput(e.target.value)}
             placeholder="e.g. Inspector R. Sharma"
-            className="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-saffron focus:border-saffron outline-none"
+            className="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none"
           />
         </div>
 
@@ -110,11 +110,11 @@ export const RolePickerModal: React.FC<RolePickerModalProps> = ({
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isSelected ? 'bg-white shadow-xs' : 'bg-slate-100'}`}>
-                      <Icon className={`w-5 h-5 ${isSelected ? 'text-saffron' : 'text-navy-900'}`} />
+                      <Icon className={`w-5 h-5 ${isSelected ? 'text-teal-600' : 'text-teal-900'}`} />
                     </div>
-                    {isSelected && <CheckCircle2 className="w-5 h-5 text-saffron" />}
+                    {isSelected && <CheckCircle2 className="w-5 h-5 text-teal-600" />}
                   </div>
-                  <h4 className="font-bold text-navy-900 text-sm">{role.title}</h4>
+                  <h4 className="font-bold text-teal-900 text-sm">{role.title}</h4>
                   <span className="text-[11px] font-medium text-slate-500 block mb-2">{role.subtitle}</span>
                   <p className="text-xs text-slate-600 leading-relaxed">{role.description}</p>
                 </div>
@@ -133,7 +133,7 @@ export const RolePickerModal: React.FC<RolePickerModalProps> = ({
           </button>
           <button
             onClick={handleConfirm}
-            className="px-5 py-2 text-xs font-bold text-white saffron-gradient rounded-lg shadow hover:opacity-95 transition flex items-center gap-1.5"
+            className="px-5 py-2 text-xs font-bold text-white teal-gradient rounded-lg shadow hover:opacity-95 transition flex items-center gap-1.5"
           >
             <span>Launch Portal as {rolesList.find(r => r.id === selectedRole)?.title}</span>
             <ArrowRight className="w-3.5 h-3.5" />

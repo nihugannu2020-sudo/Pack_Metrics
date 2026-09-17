@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { ComplianceReport, LegalNotice } from '../types';
-import { DB } from '../utils/db';
+import { API } from '../services/api';
 import { performOCR } from '../utils/ocr';
 import { validateRuleEngine } from '../utils/ruleEngine';
 import {
@@ -18,8 +18,8 @@ export const AdminDashboard: React.FC = () => {
   const [scanProgress, setScanProgress] = useState(0);
 
   useEffect(() => {
-    setScans(DB.getScans());
-    setNotices(DB.getNotices());
+    API.getScans().then(setScans).catch(console.error);
+    API.getNotices().then(setNotices).catch(console.error);
   }, []);
 
   const totalScans = scans.length;
@@ -120,18 +120,18 @@ export const AdminDashboard: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Page Title */}
-      <div className="bg-white text-navy-900 rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white text-teal-900 rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <BarChart3 className="w-6 h-6 text-saffron" />
-            <h1 className="text-2xl font-bold font-serif-heading">Executive Governance & Analytics</h1>
+            <BarChart3 className="w-6 h-6 text-teal-600" />
+            <h1 className="text-2xl font-bold font-heading">Executive Governance & Analytics</h1>
           </div>
           <p className="text-xs text-slate-300 mt-1">
             Ministry of Consumer Affairs • Legal Metrology Act 2009 System Monitoring
           </p>
         </div>
 
-        <div className="flex items-center gap-2 bg-saffron/20 border border-saffron/40 px-3.5 py-1.5 rounded-xl text-saffron text-xs font-bold">
+        <div className="flex items-center gap-2 bg-teal-600/20 border border-teal-500/40 px-3.5 py-1.5 rounded-xl text-teal-600 text-xs font-bold">
           <Activity className="w-4 h-4" />
           <span>Real-time Compliance Telemetry Active</span>
         </div>
@@ -139,21 +139,21 @@ export const AdminDashboard: React.FC = () => {
 
       {/* Top 4 KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div className="glass-panel p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex items-center justify-between">
           <div>
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Scans Audited</span>
-            <h3 className="text-3xl font-bold font-serif-heading text-navy-900 mt-1">{totalScans}</h3>
+            <h3 className="text-3xl font-bold font-heading text-teal-900 mt-1">{totalScans}</h3>
             <span className="text-[11px] text-slate-400">Across retail & e-commerce</span>
           </div>
-          <div className="w-12 h-12 bg-navy-50 text-navy-900 rounded-xl flex items-center justify-center">
-            <ShieldCheck className="w-6 h-6 text-saffron" />
+          <div className="w-12 h-12 bg-teal-50 text-teal-900 rounded-xl flex items-center justify-center">
+            <ShieldCheck className="w-6 h-6 text-teal-600" />
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div className="glass-panel p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex items-center justify-between">
           <div>
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Overall Compliance</span>
-            <h3 className="text-3xl font-bold font-serif-heading text-compliant mt-1">{complianceRate}%</h3>
+            <h3 className="text-3xl font-bold font-heading text-compliant mt-1">{complianceRate}%</h3>
             <span className="text-[11px] text-emerald-700 font-semibold">{compliantScans} Compliant Packages</span>
           </div>
           <div className="w-12 h-12 bg-emerald-50 text-emerald-800 rounded-xl flex items-center justify-center">
@@ -161,7 +161,7 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div className="glass-panel p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex items-center justify-between">
           <div>
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Top Violation Type</span>
             <h3 className="text-sm font-bold text-violation mt-1 line-clamp-1">{maxViolationRule}</h3>
@@ -172,14 +172,14 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div className="glass-panel p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex items-center justify-between">
           <div>
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Notices Generated</span>
-            <h3 className="text-3xl font-bold font-serif-heading text-navy-900 mt-1">{notices.length}</h3>
+            <h3 className="text-3xl font-bold font-heading text-teal-900 mt-1">{notices.length}</h3>
             <span className="text-[11px] text-slate-500">Sec 36(1) Show-Cause</span>
           </div>
           <div className="w-12 h-12 bg-amber-50 text-amber-700 rounded-xl flex items-center justify-center">
-            <FileText className="w-6 h-6 text-saffron" />
+            <FileText className="w-6 h-6 text-teal-600" />
           </div>
         </div>
       </div>
@@ -188,9 +188,9 @@ export const AdminDashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
         {/* Bar Chart: Violations by Rule */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div className="glass-panel p-6 shadow-sm space-y-4">
           <div>
-            <h3 className="font-bold font-serif-heading text-navy-900 text-lg">
+            <h3 className="font-bold font-heading text-teal-900 text-lg">
               Statutory Non-Compliance Distribution by Rule
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -201,15 +201,25 @@ export const AdminDashboard: React.FC = () => {
           <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={barChartData} margin={{ top: 10, right: 10, left: -20, bottom: 40 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="rule" stroke="#64748b" fontSize={10} angle={-25} textAnchor="end" />
-                <YAxis allowDecimals={false} stroke="#64748b" fontSize={12} />
+                <defs>
+                  {BAR_COLORS.map((color, index) => (
+                    <linearGradient key={`gradient-${index}`} id={`colorUv-${index}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={color} stopOpacity={0.9}/>
+                      <stop offset="95%" stopColor={color} stopOpacity={0.6}/>
+                    </linearGradient>
+                  ))}
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis dataKey="rule" stroke="#64748b" fontSize={10} angle={-25} textAnchor="end" tickLine={false} axisLine={false} />
+                <YAxis allowDecimals={false} stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#0B1F3A', color: '#fff', borderRadius: '8px', fontSize: '12px' }}
+                  cursor={{fill: 'transparent'}}
+                  contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(8px)', border: '1px solid #e2e8f0', color: '#0f172a', borderRadius: '12px', fontSize: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  itemStyle={{ fontWeight: 'bold' }}
                 />
-                <Bar dataKey="violations" radius={[6, 6, 0, 0]}>
+                <Bar dataKey="violations" radius={[6, 6, 0, 0]} barSize={40}>
                   {barChartData.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
+                    <Cell key={`cell-${index}`} fill={`url(#colorUv-${index % BAR_COLORS.length})`} />
                   ))}
                 </Bar>
               </BarChart>
@@ -218,9 +228,9 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         {/* Line Chart: National Compliance Rate Trend */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div className="glass-panel p-6 shadow-sm space-y-4">
           <div>
-            <h3 className="font-bold font-serif-heading text-navy-900 text-lg">
+            <h3 className="font-bold font-heading text-teal-900 text-lg">
               National Compliance Rate Trajectory (%)
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -230,15 +240,21 @@ export const AdminDashboard: React.FC = () => {
 
           <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trendData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="date" stroke="#64748b" fontSize={12} />
-                <YAxis domain={[0, 100]} unit="%" stroke="#64748b" fontSize={12} />
+              <LineChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorRate" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#16a34a" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#16a34a" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis dataKey="date" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis domain={[0, 100]} unit="%" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#0B1F3A', color: '#fff', borderRadius: '8px', fontSize: '12px' }}
+                  contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(8px)', border: '1px solid #e2e8f0', color: '#0f172a', borderRadius: '12px', fontSize: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                   formatter={(val: any) => [`${val}%`, 'Compliance Pass Rate']}
                 />
-                <Line type="monotone" dataKey="rate" stroke="#16A34A" strokeWidth={3} dot={{ r: 5, fill: '#16A34A' }} />
+                <Line type="monotone" dataKey="rate" stroke="#16a34a" strokeWidth={4} dot={{ r: 6, fill: '#16a34a', stroke: '#fff', strokeWidth: 2 }} activeDot={{ r: 8, fill: '#16a34a', stroke: '#fff' }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -248,8 +264,8 @@ export const AdminDashboard: React.FC = () => {
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-bold font-serif-heading text-navy-900 text-lg flex items-center gap-2">
-              <FileText className="w-5 h-5 text-saffron" />
+            <h3 className="font-bold font-heading text-teal-900 text-lg flex items-center gap-2">
+              <FileText className="w-5 h-5 text-teal-600" />
               <span>Reports Submitted by Field Inspectors</span>
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -275,7 +291,7 @@ export const AdminDashboard: React.FC = () => {
                         {report.overallStatus}
                       </span>
                     </div>
-                    <h4 className="font-bold text-navy-900 text-sm mt-1">{report.productName || 'Unnamed product'}</h4>
+                    <h4 className="font-bold text-teal-900 text-sm mt-1">{report.productName || 'Unnamed product'}</h4>
                     <p className="text-xs text-slate-600">{report.manufacturerName} • Submitted by {report.submittedBy || 'Field Inspector'}</p>
                   </div>
                   <div className="flex items-center gap-3">
@@ -285,7 +301,7 @@ export const AdminDashboard: React.FC = () => {
                     </div>
                     <button
                       onClick={() => { setSelectedReport(report); setScannedReport(null); setScanStatus(''); }}
-                      className="px-3 py-2 rounded-lg bg-navy-900 text-white text-xs font-bold hover:bg-navy-800 transition flex items-center gap-1.5"
+                      className="px-3 py-2 rounded-lg bg-teal-900 text-white text-xs font-bold hover:bg-teal-900 transition flex items-center gap-1.5"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       View report
@@ -304,7 +320,7 @@ export const AdminDashboard: React.FC = () => {
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
               <div>
                 <p className="text-xs text-slate-500 font-mono">{selectedReport.id}</p>
-                <h3 className="text-xl font-bold font-serif-heading text-navy-900 mt-1">{selectedReport.productName || 'Inspector report'}</h3>
+                <h3 className="text-xl font-bold font-heading text-teal-900 mt-1">{selectedReport.productName || 'Inspector report'}</h3>
                 <p className="text-xs text-slate-600 mt-1">{selectedReport.manufacturerName} • Submitted by {selectedReport.submittedBy || 'Field Inspector'}</p>
               </div>
               <button
@@ -320,7 +336,7 @@ export const AdminDashboard: React.FC = () => {
               <button
                 onClick={() => scanAttachedReport(selectedReport)}
                 disabled={isScanningReport || !(selectedReport.imageUrls?.length || selectedReport.imageUrl)}
-                className="px-4 py-2 rounded-lg bg-saffron text-white text-xs font-bold hover:bg-saffron-600 disabled:bg-slate-200 disabled:text-slate-500 transition flex items-center justify-center gap-2"
+                className="px-4 py-2 rounded-lg bg-teal-600 text-white text-xs font-bold hover:bg-teal-600 disabled:bg-slate-200 disabled:text-slate-500 transition flex items-center justify-center gap-2"
               >
                 <ScanLine className="w-4 h-4" />
                 {isScanningReport ? 'Scanning attached image...' : 'Scan attached image'}
@@ -329,13 +345,13 @@ export const AdminDashboard: React.FC = () => {
             </div>
             {isScanningReport && (
               <div className="mt-3 h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-saffron transition-all" style={{ width: `${scanProgress}%` }} />
+                <div className="h-full bg-teal-600 transition-all" style={{ width: `${scanProgress}%` }} />
               </div>
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-5">
               <div>
-                <h4 className="text-xs font-bold text-navy-900 uppercase tracking-wider mb-2">Submitted label image</h4>
+                <h4 className="text-xs font-bold text-teal-900 uppercase tracking-wider mb-2">Submitted label image</h4>
                 {(selectedReport.imageUrls?.length || selectedReport.imageUrl) ? (
                   <div className="grid grid-cols-2 gap-2">
                     {(selectedReport.imageUrls?.length ? selectedReport.imageUrls : [selectedReport.imageUrl]).map((imageUrl, index) => (
@@ -355,12 +371,12 @@ export const AdminDashboard: React.FC = () => {
               </div>
 
               <div>
-                <h4 className="text-xs font-bold text-navy-900 uppercase tracking-wider mb-2">Compliance report</h4>
+                <h4 className="text-xs font-bold text-teal-900 uppercase tracking-wider mb-2">Compliance report</h4>
                 <div className="space-y-2 border border-slate-200 rounded-xl overflow-hidden">
                   {(scannedReport || selectedReport).results.map(result => (
                     <div key={result.ruleId} className="p-3 border-b last:border-b-0 border-slate-100">
                       <div className="flex items-center justify-between gap-3">
-                        <span className="text-xs font-semibold text-navy-900">{result.title}</span>
+                        <span className="text-xs font-semibold text-teal-900">{result.title}</span>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${result.status === 'pass' ? 'bg-emerald-100 text-emerald-800' : result.status === 'fail' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'}`}>
                           {result.status.replace('_', ' ')}
                         </span>
@@ -373,7 +389,7 @@ export const AdminDashboard: React.FC = () => {
             </div>
 
             <div className="mt-5">
-              <h4 className="text-xs font-bold text-navy-900 uppercase tracking-wider mb-2">Extracted OCR text</h4>
+              <h4 className="text-xs font-bold text-teal-900 uppercase tracking-wider mb-2">Extracted OCR text</h4>
               <pre className="p-3 bg-slate-900 text-emerald-400 rounded-xl text-[11px] font-mono whitespace-pre-wrap max-h-40 overflow-y-auto">
                 {(scannedReport || selectedReport).extractedText || 'No OCR text extracted.'}
               </pre>

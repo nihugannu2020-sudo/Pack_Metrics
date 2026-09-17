@@ -1,5 +1,5 @@
-import React from 'react';
-import { ShieldCheck, Search, AlertOctagon, Globe2, FileCheck2, ArrowRight, Zap, TrendingDown, Scale, Lock } from 'lucide-react';
+import React, { useState } from 'react';
+import { ShieldCheck, Search, AlertOctagon, Globe2, FileCheck2, ArrowRight, Zap, TrendingDown, Scale, Lock, Info, XCircle } from 'lucide-react';
 
 interface LandingPageProps {
   onLaunchDemo: () => void;
@@ -7,6 +7,8 @@ interface LandingPageProps {
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchDemo, onSelectRole }) => {
+  const [showInstructions, setShowInstructions] = useState<boolean>(false);
+  
   const problemSteps = [
     {
       num: '01',
@@ -41,9 +43,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchDemo, onSelect
   ];
 
   return (
-    <div className="min-h-screen bg-cream flex flex-col">
+    <div className="min-h-screen bg-ivory flex flex-col">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-white text-navy-900 pt-16 pb-20 px-4 sm:px-6 lg:px-8 border-b border-slate-200">
+      <section className="relative overflow-hidden bg-white text-teal-900 pt-16 pb-20 px-4 sm:px-6 lg:px-8 border-b border-slate-200">
         
         <div className="max-w-6xl mx-auto relative z-10 text-center">
           <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-100 px-3.5 py-1.5 rounded-full text-blue-700 text-xs font-semibold mb-6">
@@ -51,8 +53,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchDemo, onSelect
             Legal Metrology Act 2009 & PCR Rules 2011 Automated Verification
           </div>
 
-          <h1 className="font-serif-heading text-4xl sm:text-6xl font-extrabold tracking-tight text-navy-900 max-w-4xl mx-auto leading-tight">
-            AI-powered Legal Metrology compliance, <span className="text-saffron">in seconds.</span>
+          <h1 className="font-heading text-4xl sm:text-6xl font-extrabold tracking-tight text-teal-900 max-w-4xl mx-auto leading-tight">
+            AI-powered Legal Metrology compliance, <span className="text-teal-600">in seconds.</span>
           </h1>
 
           <p className="mt-6 text-lg sm:text-xl text-slate-600 max-w-2xl mx-auto font-light leading-relaxed">
@@ -62,7 +64,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchDemo, onSelect
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             <button
               onClick={onLaunchDemo}
-              className="w-full sm:w-auto px-8 py-4 bg-saffron text-white font-bold text-base rounded-xl shadow-xl hover:bg-saffron-600 transition flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-8 py-4 bg-teal-600 text-white font-bold text-base rounded-xl shadow-xl hover:bg-teal-600 transition flex items-center justify-center gap-2"
             >
               <span>Launch Interactive Demo</span>
               <ArrowRight className="w-5 h-5" />
@@ -75,32 +77,97 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchDemo, onSelect
             </button>
           </div>
 
+          <div className="mt-6 flex justify-center">
+            <button
+              onClick={() => setShowInstructions(true)}
+              className="text-sm font-semibold text-teal-600 hover:text-teal-700 underline underline-offset-4 flex items-center gap-1.5"
+            >
+              <Info className="w-4 h-4" />
+              How to use PackMetrics
+            </button>
+          </div>
+
           {/* Quick Metrics Bar */}
           <div className="mt-14 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto bg-slate-50 p-4 rounded-2xl border border-slate-200">
-            <div className="p-3 text-center border-r border-navy-800 last:border-0">
-              <span className="block text-2xl font-bold text-saffron font-serif-heading">7 Statutory</span>
+            <div className="p-3 text-center border-r border-teal-900 last:border-0">
+              <span className="block text-2xl font-bold text-teal-600 font-heading">7 Statutory</span>
               <span className="text-xs text-slate-400">Rule 6 Declarations</span>
             </div>
-            <div className="p-3 text-center border-r border-navy-800 last:border-0">
-              <span className="block text-2xl font-bold text-navy-900 font-serif-heading">&lt; 3 Seconds</span>
+            <div className="p-3 text-center border-r border-teal-900 last:border-0">
+              <span className="block text-2xl font-bold text-teal-900 font-heading">&lt; 3 Seconds</span>
               <span className="text-xs text-slate-500">OCR & Rule Check Time</span>
             </div>
-            <div className="p-3 text-center border-r border-navy-800 last:border-0">
-              <span className="block text-2xl font-bold text-emerald-400 font-serif-heading">100% Client-Side</span>
+            <div className="p-3 text-center border-r border-teal-900 last:border-0">
+              <span className="block text-2xl font-bold text-emerald-400 font-heading">100% Client-Side</span>
               <span className="text-xs text-slate-500">Zero API Key / Server</span>
             </div>
             <div className="p-3 text-center">
-              <span className="block text-2xl font-bold text-saffron font-serif-heading">PDF Notice</span>
+              <span className="block text-2xl font-bold text-teal-600 font-heading">PDF Notice</span>
               <span className="text-xs text-slate-500">Section 36(1) Draft</span>
             </div>
           </div>
         </div>
       </section>
 
+      {/* Instructions Modal */}
+      {showInstructions && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-teal-900/40 backdrop-blur-sm" onClick={() => setShowInstructions(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="bg-teal-900 px-6 py-4 flex items-center justify-between">
+              <h3 className="text-white font-heading font-bold text-xl flex items-center gap-2">
+                <Info className="w-5 h-5 text-teal-600" />
+                How to use PackMetrics
+              </h3>
+              <button onClick={() => setShowInstructions(false)} className="text-slate-400 hover:text-white transition">
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4 text-slate-600">
+              <div className="flex gap-4">
+                <div className="w-8 h-8 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold flex-shrink-0">1</div>
+                <div>
+                  <h4 className="font-bold text-teal-900">Choose Your Role</h4>
+                  <p className="text-sm">Click "Launch Interactive Demo" to simulate an end-to-end workflow, or select a specific role (Inspector/Manufacturer) from the top right navigation.</p>
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <div className="w-8 h-8 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold flex-shrink-0">2</div>
+                <div>
+                  <h4 className="font-bold text-teal-900">Upload Package Images</h4>
+                  <p className="text-sm">In the dashboard, upload a photo of a product package or choose one of our sample gallery presets.</p>
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <div className="w-8 h-8 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold flex-shrink-0">3</div>
+                <div>
+                  <h4 className="font-bold text-teal-900">Review AI OCR Analysis</h4>
+                  <p className="text-sm">PackMetrics will instantly scan the image, run it against the Legal Metrology Rule 6 guidelines, and generate an AI-powered compliance checklist.</p>
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <div className="w-8 h-8 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold flex-shrink-0">4</div>
+                <div>
+                  <h4 className="font-bold text-teal-900">Take Action</h4>
+                  <p className="text-sm">Inspectors can draft and file legal notices directly from the dashboard. Manufacturers can review failures and improve their packaging.</p>
+                </div>
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+              <button
+                onClick={() => setShowInstructions(false)}
+                className="px-5 py-2 bg-teal-900 text-white font-semibold rounded-lg hover:bg-teal-900 transition"
+              >
+                Got it, let's start!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Problem Cycle Visual Section */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold font-serif-heading text-navy-900">
+          <h2 className="text-3xl font-bold font-heading text-teal-900">
             The Enforcement Challenge in Packaging Compliance
           </h2>
           <p className="text-sm text-slate-600 mt-2 max-w-xl mx-auto">
@@ -118,12 +185,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchDemo, onSelect
               >
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-2xl font-bold font-serif-heading text-saffron">{step.num}</span>
-                    <div className="w-8 h-8 rounded-lg bg-navy-50 text-navy-900 flex items-center justify-center group-hover:bg-saffron group-hover:text-white transition">
+                    <span className="text-2xl font-bold font-heading text-teal-600">{step.num}</span>
+                    <div className="w-8 h-8 rounded-lg bg-teal-50 text-teal-900 flex items-center justify-center group-hover:bg-teal-600 group-hover:text-white transition">
                       <Icon className="w-4 h-4" />
                     </div>
                   </div>
-                  <h3 className="font-bold text-navy-900 text-sm mb-1">{step.title}</h3>
+                  <h3 className="font-bold text-teal-900 text-sm mb-1">{step.title}</h3>
                   <p className="text-xs text-slate-600 leading-relaxed">{step.desc}</p>
                 </div>
               </div>
@@ -136,8 +203,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchDemo, onSelect
       <section className="bg-white py-16 px-4 sm:px-6 lg:px-8 border-y border-slate-200">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
-            <span className="text-xs font-bold uppercase tracking-wider text-saffron">Paradigm Shift</span>
-            <h2 className="text-3xl font-bold font-serif-heading text-navy-900 mt-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-teal-600">Paradigm Shift</span>
+            <h2 className="text-3xl font-bold font-heading text-teal-900 mt-1">
               How PackMetrics Automates Compliance
             </h2>
           </div>
@@ -203,10 +270,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchDemo, onSelect
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
             <div>
-              <div className="w-10 h-10 bg-navy-50 text-navy-900 rounded-xl flex items-center justify-center mb-4">
-                <TrendingDown className="w-5 h-5 text-saffron" />
+              <div className="w-10 h-10 bg-teal-50 text-teal-900 rounded-xl flex items-center justify-center mb-4">
+                <TrendingDown className="w-5 h-5 text-teal-600" />
               </div>
-              <h3 className="font-bold text-navy-900 text-base mb-2">Audit Cost Reduction</h3>
+              <h3 className="font-bold text-teal-900 text-base mb-2">Audit Cost Reduction</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
                 Streamlines officer verification time per SKU by 85%, enabling higher coverage of retail packaging without expanding field force overhead.
               </p>
@@ -215,10 +282,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchDemo, onSelect
 
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
             <div>
-              <div className="w-10 h-10 bg-navy-50 text-navy-900 rounded-xl flex items-center justify-center mb-4">
-                <Scale className="w-5 h-5 text-saffron" />
+              <div className="w-10 h-10 bg-teal-50 text-teal-900 rounded-xl flex items-center justify-center mb-4">
+                <Scale className="w-5 h-5 text-teal-600" />
               </div>
-              <h3 className="font-bold text-navy-900 text-base mb-2">MSME Fair Competition</h3>
+              <h3 className="font-bold text-teal-900 text-base mb-2">MSME Fair Competition</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
                 Prevents non-compliant packaging from undercutting legitimate compliant manufacturers who follow statutory standard weight and pricing disclosures.
               </p>
@@ -227,10 +294,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchDemo, onSelect
 
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
             <div>
-              <div className="w-10 h-10 bg-navy-50 text-navy-900 rounded-xl flex items-center justify-center mb-4">
-                <Lock className="w-5 h-5 text-saffron" />
+              <div className="w-10 h-10 bg-teal-50 text-teal-900 rounded-xl flex items-center justify-center mb-4">
+                <Lock className="w-5 h-5 text-teal-600" />
               </div>
-              <h3 className="font-bold text-navy-900 text-base mb-2">Consumer Loss Mitigation</h3>
+              <h3 className="font-bold text-teal-900 text-base mb-2">Consumer Loss Mitigation</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
                 Protects consumers against deceptive package sizing, hidden MRPs, and missing grievance contacts across physical stores and dark-store e-commerce.
               </p>
@@ -240,7 +307,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchDemo, onSelect
       </section>
 
       {/* Footer CTA */}
-      <footer className="mt-auto bg-navy-900 text-white py-8 px-4 border-t border-navy-800 text-center">
+      <footer className="mt-auto bg-teal-900 text-white py-8 px-4 border-t border-teal-900 text-center">
         <p className="text-xs text-slate-400">
           PackMetrics Prototype • Legal Metrology Act 2009 & Packaged Commodities Rules 2011 Demo
         </p>

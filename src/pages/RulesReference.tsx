@@ -17,11 +17,11 @@ export const RulesReference: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Header */}
-      <div className="bg-white text-navy-900 rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white text-teal-900 rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <BookOpen className="w-6 h-6 text-saffron" />
-            <h1 className="text-2xl font-bold font-serif-heading">Statutory Rules Reference Directory</h1>
+            <BookOpen className="w-6 h-6 text-teal-600" />
+            <h1 className="text-2xl font-bold font-heading">Statutory Rules Reference Directory</h1>
           </div>
           <p className="text-xs text-slate-300 mt-1">
             Ground Truth Index: {rulesData.act} & {rulesData.rulesSource}
@@ -36,7 +36,7 @@ export const RulesReference: React.FC = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search Rule Code (e.g. Rule 6(1)(a))..."
-            className="w-full pl-9 pr-4 py-2 bg-navy-950 text-white placeholder-slate-400 rounded-xl text-xs border border-navy-700 focus:outline-none focus:ring-2 focus:ring-saffron"
+            className="w-full pl-9 pr-4 py-2 bg-teal-900 text-white placeholder-slate-400 rounded-xl text-xs border border-teal-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
           />
         </div>
       </div>
@@ -44,8 +44,8 @@ export const RulesReference: React.FC = () => {
       {/* Rules Grid */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <h3 className="font-bold font-serif-heading text-navy-900 text-lg flex items-center gap-2">
-            <Scale className="w-5 h-5 text-saffron" />
+          <h3 className="font-bold font-heading text-teal-900 text-lg flex items-center gap-2">
+            <Scale className="w-5 h-5 text-teal-600" />
             <span>Rule 6 Mandatory Package Declarations ({filteredDeclarations.length} Active Rules)</span>
           </h3>
           <span className="text-xs text-slate-500 font-mono">Government Gazette Verified</span>
@@ -59,10 +59,10 @@ export const RulesReference: React.FC = () => {
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/60 pb-2">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono font-bold text-xs bg-navy-900 text-white px-2.5 py-1 rounded">
+                  <span className="font-mono font-bold text-xs bg-teal-900 text-white px-2.5 py-1 rounded">
                     {rule.legalRef}
                   </span>
-                  <h4 className="font-bold text-navy-900 text-sm">{rule.title}</h4>
+                  <h4 className="font-bold text-teal-900 text-sm">{rule.title}</h4>
                 </div>
                 <span className="text-[11px] font-bold text-slate-600 bg-slate-200 px-2 py-0.5 rounded">
                   ID: {rule.id}
@@ -105,7 +105,7 @@ export const RulesReference: React.FC = () => {
         
         {/* Table 1: Weight / Volume */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-          <h4 className="font-bold font-serif-heading text-navy-900 text-base">
+          <h4 className="font-bold font-heading text-teal-900 text-base">
             Statutory Numeral Height — Net Quantity (Weight / Volume)
           </h4>
           <p className="text-xs text-slate-500">
@@ -124,9 +124,9 @@ export const RulesReference: React.FC = () => {
               <tbody className="divide-y divide-slate-100">
                 {rulesData.fontHeightTable_WeightOrVolume_mm.map((row, i) => (
                   <tr key={i} className="hover:bg-slate-50">
-                    <td className="p-2.5 font-semibold text-navy-900">{row.netQuantity}</td>
+                    <td className="p-2.5 font-semibold text-teal-900">{row.netQuantity}</td>
                     <td className="p-2.5 font-mono font-bold text-emerald-700">≥ {row.normal} mm</td>
-                    <td className="p-2.5 font-mono font-bold text-saffron">≥ {row.moldedOrBlown} mm</td>
+                    <td className="p-2.5 font-mono font-bold text-teal-600">≥ {row.moldedOrBlown} mm</td>
                   </tr>
                 ))}
               </tbody>
@@ -136,7 +136,7 @@ export const RulesReference: React.FC = () => {
 
         {/* Table 2: Area of PDP */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-          <h4 className="font-bold font-serif-heading text-navy-900 text-base">
+          <h4 className="font-bold font-heading text-teal-900 text-base">
             Statutory Numeral Height — Area of PDP (cm²)
           </h4>
           <p className="text-xs text-slate-500">
@@ -155,9 +155,9 @@ export const RulesReference: React.FC = () => {
               <tbody className="divide-y divide-slate-100">
                 {rulesData.fontHeightTable_AreaOfPDP_mm.map((row, i) => (
                   <tr key={i} className="hover:bg-slate-50">
-                    <td className="p-2.5 font-semibold text-navy-900">{row.pdpArea}</td>
+                    <td className="p-2.5 font-semibold text-teal-900">{row.pdpArea}</td>
                     <td className="p-2.5 font-mono font-bold text-emerald-700">≥ {row.normal} mm</td>
-                    <td className="p-2.5 font-mono font-bold text-saffron">≥ {row.moldedOrBlown} mm</td>
+                    <td className="p-2.5 font-mono font-bold text-teal-600">≥ {row.moldedOrBlown} mm</td>
                   </tr>
                 ))}
               </tbody>

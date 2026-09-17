@@ -34,6 +34,7 @@ export interface RuleResult {
   guidanceNote?: string;
   warning?: string;
   details?: string;
+  aiExplanation?: string;
 }
 
 export interface ComplianceReport {
