@@ -10,6 +10,19 @@ import io
 import google.generativeai as genai
 from PIL import Image
 
+def _load_local_environment() -> None:
+    env_path = os.path.join(os.path.dirname(__file__), "..", ".env.local")
+    try:
+        with open(env_path, encoding="utf-8") as env_file:
+            for line in env_file:
+                key, separator, value = line.strip().partition("=")
+                if separator and key and not key.startswith("#") and key not in os.environ:
+                    os.environ[key] = value.strip().strip('"').strip("'")
+    except OSError:
+        pass
+
+_load_local_environment()
+
 # Configure Gemini if key is available
 if os.getenv("GOOGLE_API_KEY"):
     genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
@@ -161,11 +174,74 @@ class ExplainRequest(BaseModel):
     results: List[Any]
     extractedText: str
 
+def _openrouter_explanations(req: ExplainRequest) -> Dict[str, str]:
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        return {}
+
+    import json
+    from urllib.request import Request, urlopen
+
+    rules = [
+        {
+            "ruleId": result.get("ruleId"),
+            "title": result.get("title"),
+            "legalRef": result.get("legalRef"),
+            "status": result.get("status"),
+            "matchedText": result.get("matchedText"),
+            "guidanceNote": result.get("guidanceNote"),
+            "warning": result.get("warning"),
+        }
+        for result in req.results
+    ]
+    prompt = (
+        "You are reviewing OCR evidence against Indian packaged-commodity declaration rules. "
+        "Compare the OCR text to each supplied rule result. Do not invent text, legal requirements, "
+        "or facts. Treat the supplied local status as authoritative; explain whether the OCR evidence "
+        "supports it and what an inspector should verify. Return ONLY a JSON object mapping each exact "
+        "ruleId to a concise 1-2 sentence explanation.\n\n"
+        f"OCR TEXT:\n{req.extractedText}\n\nRULE RESULTS:\n{json.dumps(rules, ensure_ascii=True)}"
+    )
+    payload = json.dumps({
+        "model": os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini"),
+        "messages": [
+            {"role": "system", "content": "Return valid JSON only. Never use markdown fences."},
+            {"role": "user", "content": prompt},
+        ],
+        "temperature": 0.1,
+        "response_format": {"type": "json_object"},
+    }).encode("utf-8")
+    request = Request(
+        "https://openrouter.ai/api/v1/chat/completions",
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": os.getenv("OPENROUTER_SITE_URL", "http://localhost:5173"),
+            "X-Title": "PackMetrics Compliance Review",
+        },
+        method="POST",
+    )
+    with urlopen(request, timeout=30) as response:
+        response_data = json.loads(response.read().decode("utf-8"))
+    content = response_data["choices"][0]["message"]["content"]
+    parsed = json.loads(content)
+    return {
+        result.get("ruleId"): str(parsed[result.get("ruleId")]).strip()
+        for result in req.results
+        if result.get("ruleId") in parsed and str(parsed[result.get("ruleId")]).strip()
+    }
+
 @app.post("/api/explain")
 def explain_rules(req: ExplainRequest):
     explanations = {}
+
+    try:
+        explanations.update(_openrouter_explanations(req))
+    except Exception as e:
+        print(f"OpenRouter comparison error: {e}")
     
-    if os.getenv("GOOGLE_API_KEY"):
+    if not explanations and os.getenv("GOOGLE_API_KEY"):
         try:
             model = genai.GenerativeModel('gemini-1.5-flash')
             # For prototype speed, we ask it to explain all rules in one go
