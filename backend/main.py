@@ -160,6 +160,8 @@ def process_ocr(req: OCRRequest):
             "MRP: Rs. 99.00 (Incl. of all taxes)\n"
             "Batch No: PM-2026-X1\n"
             "Best Before: 12 months from manufacture\n"
+            "For complaints, contact: 1800 123 4567\n"
+            "Email: customercare@packmetrics.com\n"
         )
 
     # Note: Returning empty words array as getting exact bounding boxes from Gemini requires a specialized prompt/output structure
