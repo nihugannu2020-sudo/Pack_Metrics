@@ -1,6 +1,6 @@
 import type { ComplianceReport, LegalNotice } from '../types';
 
-const API_URL = 'http://localhost:8001/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001/api';
 
 export const API = {
   async getScans(): Promise<ComplianceReport[]> {
