@@ -8,7 +8,7 @@ import { validateRuleEngine } from '../utils/ruleEngine';
 import { readFileAsDataUrl, stitchImages, compressImage } from '../utils/file';
 import toast from 'react-hot-toast';
 import { ExecutiveSummary } from '../components/ExecutiveSummary';
-import { Factory, ShieldCheck, FileText, CheckCircle, AlertTriangle, Building, Upload, Send, Eye, CheckCircle2, XCircle, Clock, Info, ShieldAlert, CheckSquare, Sparkles, Loader2, AlertCircle, Scan, Search, Plus, ArrowLeft } from 'lucide-react';
+import { Factory, ShieldCheck, FileText, CheckCircle, AlertTriangle, Building, Upload, Send, Eye, CheckCircle2, XCircle, Clock, Info, ShieldAlert, CheckSquare, Sparkles, Loader2, AlertCircle, Scan, Search, Plus, ArrowLeft, ScanLine } from 'lucide-react';
 
 interface ManufacturerDashboardProps {
   userName: string;
