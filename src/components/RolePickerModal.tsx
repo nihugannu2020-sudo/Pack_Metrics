@@ -6,19 +6,16 @@ interface RolePickerModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentRole: UserRole;
-  currentName: string;
-  onSelectRole: (role: UserRole, name: string) => void;
+  onProceed: (role: UserRole) => void;
 }
 
 export const RolePickerModal: React.FC<RolePickerModalProps> = ({
   isOpen,
   onClose,
   currentRole,
-  currentName,
-  onSelectRole,
+  onProceed,
 }) => {
   const [selectedRole, setSelectedRole] = useState<UserRole>(currentRole);
-  const [nameInput, setNameInput] = useState<string>(currentName);
 
   if (!isOpen) return null;
 
@@ -50,9 +47,7 @@ export const RolePickerModal: React.FC<RolePickerModalProps> = ({
   ];
 
   const handleConfirm = () => {
-    const finalName = nameInput.trim() || (selectedRole === 'inspector' ? 'Inspector R. Kumar' : selectedRole === 'manufacturer' ? 'Apex Foods Quality Mgr' : 'Officer V. Sharma');
-    onSelectRole(selectedRole, finalName);
-    onClose();
+    onProceed(selectedRole);
   };
 
   return (
@@ -75,21 +70,6 @@ export const RolePickerModal: React.FC<RolePickerModalProps> = ({
           >
             ✕
           </button>
-        </div>
-
-        {/* User Name Input */}
-        <div className="mb-5">
-          <label className="block text-xs font-semibold text-teal-900 mb-1.5 flex items-center gap-1.5">
-            <User className="w-3.5 h-3.5 text-teal-600" />
-            Your Officer / User Name
-          </label>
-          <input
-            type="text"
-            value={nameInput}
-            onChange={(e) => setNameInput(e.target.value)}
-            placeholder="e.g. Inspector R. Sharma"
-            className="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none"
-          />
         </div>
 
         {/* Role Cards */}

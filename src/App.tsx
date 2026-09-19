@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import type { UserRole } from './types';
 import { DB } from './utils/db';
 import { Navbar } from './components/Navbar';
@@ -8,12 +10,14 @@ import { InspectorDashboard } from './components/dashboards/InspectorDashboard';
 import { ManufacturerDashboard } from './components/dashboards/ManufacturerDashboard';
 import { AdminDashboard } from './components/dashboards/AdminDashboard';
 import { RulesReference } from './pages/RulesReference';
+import { LoginModal } from './components/LoginModal';
 
 export function App() {
   const [currentRole, setCurrentRole] = useState<UserRole>('inspector');
   const [userName, setUserName] = useState<string>('Inspector Rajesh Kumar');
-  const [activeTab, setActiveTab] = useState<string>('landing');
   const [isRoleModalOpen, setIsRoleModalOpen] = useState<boolean>(false);
+  const [loginRole, setLoginRole] = useState<UserRole | null>(null);
+  const navigate = useNavigate();
 
   const defaultNames: Record<UserRole, string> = {
     inspector: 'Inspector Rajesh Kumar',
@@ -40,54 +44,81 @@ export function App() {
     setUserName(resolvedName);
     DB.setUserRole(role);
     DB.setUserName(resolvedName);
+    
+    const nameParts = resolvedName.split(' - ');
+    const personName = nameParts[0].trim();
+    const organization = nameParts.length > 1 ? nameParts[1].trim() : (role === 'admin' ? 'System Administrator' : 'Govt of India');
+    DB.logUserActivity(role, personName, organization);
 
     // Auto navigate to corresponding dashboard
-    if (role === 'inspector') setActiveTab('inspector');
-    else if (role === 'manufacturer') setActiveTab('manufacturer');
-    else if (role === 'admin') setActiveTab('admin');
+    if (role === 'inspector') navigate('/inspector');
+    else if (role === 'manufacturer') navigate('/manufacturer');
+    else if (role === 'admin') navigate('/admin');
   };
 
-  const authorizedTab = activeTab === 'landing' || activeTab === 'rules' || activeTab === currentRole
-    ? activeTab
-    : currentRole;
+  // Helper for role-based route protection
+  const ProtectedRoute = ({ allowedRole, children }: { allowedRole: UserRole, children: React.ReactNode }) => {
+    if (currentRole !== allowedRole) {
+      return <Navigate to={`/${currentRole}`} replace />;
+    }
+    return <>{children}</>;
+  };
 
   return (
     <div className="min-h-screen bg-ivory text-teal-900 flex flex-col font-sans">
-      {/* Top Navbar */}
       <Navbar
         currentRole={currentRole}
         userName={userName}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
         onOpenRolePicker={() => setIsRoleModalOpen(true)}
       />
+      <Toaster position="top-right" />
 
-      {/* Page Routing */}
       <main className="flex-1">
-        {authorizedTab === 'landing' && (
-          <LandingPage
-            onLaunchDemo={() => setActiveTab('inspector')}
-            onSelectRole={(r) => handleSelectRole(r, userName)}
-          />
-        )}
-
-        {authorizedTab === 'inspector' && currentRole === 'inspector' && <InspectorDashboard officerName={userName} />}
-
-        {authorizedTab === 'manufacturer' && currentRole === 'manufacturer' && <ManufacturerDashboard userName={userName} />}
-
-        {authorizedTab === 'admin' && currentRole === 'admin' && <AdminDashboard />}
-
-        {authorizedTab === 'rules' && <RulesReference />}
+        <Routes>
+          <Route path="/" element={<LandingPage onSelectRole={(r, n) => handleSelectRole(r, n || userName)} />} />
+          <Route path="/rules" element={<RulesReference />} />
+          <Route path="/inspector" element={
+            <ProtectedRoute allowedRole="inspector">
+              <InspectorDashboard officerName={userName} />
+            </ProtectedRoute>
+          } />
+          <Route path="/manufacturer" element={
+            <ProtectedRoute allowedRole="manufacturer">
+              <ManufacturerDashboard userName={userName} />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin" element={
+            <ProtectedRoute allowedRole="admin">
+              <AdminDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </main>
 
-      {/* Role Switcher Modal */}
-      <RolePickerModal
-        isOpen={isRoleModalOpen}
-        onClose={() => setIsRoleModalOpen(false)}
-        currentRole={currentRole}
-        currentName={userName}
-        onSelectRole={handleSelectRole}
-      />
+      {isRoleModalOpen && (
+        <RolePickerModal
+          isOpen={isRoleModalOpen}
+          onClose={() => setIsRoleModalOpen(false)}
+          currentRole={currentRole}
+          onProceed={(role) => {
+            setIsRoleModalOpen(false);
+            setLoginRole(role);
+          }}
+        />
+      )}
+
+      {loginRole && (
+        <LoginModal
+          isOpen={!!loginRole}
+          role={loginRole}
+          onClose={() => setLoginRole(null)}
+          onLogin={(name) => {
+            setLoginRole(null);
+            handleSelectRole(loginRole, name);
+          }}
+        />
+      )}
     </div>
   );
 }

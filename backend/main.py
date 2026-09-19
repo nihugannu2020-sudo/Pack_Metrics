@@ -126,7 +126,7 @@ class OCRRequest(BaseModel):
 
 @app.post("/api/ocr")
 def process_ocr(req: OCRRequest):
-    # Decode base64 image (format is usually "data:image/png;base64,...")
+    # Decode base64 image just to validate it
     try:
         header, encoded = req.image_url.split(",", 1)
         image_bytes = base64.b64decode(encoded)
@@ -134,9 +134,53 @@ def process_ocr(req: OCRRequest):
     except Exception as e:
         raise HTTPException(status_code=400, detail="Invalid base64 image")
 
-    if os.getenv("GOOGLE_API_KEY"):
+    extracted_text = ""
+    
+    if os.getenv("OPENROUTER_API_KEY"):
         try:
-            model = genai.GenerativeModel('gemini-1.5-pro')
+            import json
+            from urllib.request import Request, urlopen
+            
+            prompt = """
+            Perform highly accurate Computer Vision OCR (Optical Character Recognition) on this packaging image. 
+            Extract ALL text exactly as it appears, including small print, ingredients, manufacturer details, pricing, net weight, and nutritional facts. 
+            Do NOT summarize, do NOT add conversational commentary, and do NOT hallucinate text that is not visible. 
+            Return the raw extracted text maintaining line breaks where appropriate.
+            """
+            
+            payload = json.dumps({
+                "model": "google/gemini-2.5-flash",
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt},
+                            {"type": "image_url", "image_url": {"url": req.image_url}}
+                        ]
+                    }
+                ],
+                "temperature": 0.1,
+                "max_tokens": 2000
+            }).encode("utf-8")
+            
+            request = Request(
+                "https://openrouter.ai/api/v1/chat/completions",
+                data=payload,
+                headers={
+                    "Authorization": f"Bearer {os.getenv('OPENROUTER_API_KEY')}",
+                    "Content-Type": "application/json"
+                },
+                method="POST"
+            )
+            with urlopen(request, timeout=60) as response:
+                response_data = json.loads(response.read().decode("utf-8"))
+            extracted_text = response_data["choices"][0]["message"]["content"]
+        except Exception as e:
+            print(f"OpenRouter API Error: {e}")
+            
+    elif os.getenv("GOOGLE_API_KEY"):
+        try:
+            model = genai.GenerativeModel('gemini-2.5-pro')
             prompt = """
             Perform highly accurate Computer Vision OCR (Optical Character Recognition) on this packaging image. 
             Extract ALL text exactly as it appears, including small print, ingredients, manufacturer details, pricing, net weight, and nutritional facts. 
@@ -147,8 +191,8 @@ def process_ocr(req: OCRRequest):
             extracted_text = response.text
         except Exception as e:
             print(f"Gemini API Error: {e}")
-            extracted_text = "Error calling AI model. Please check logs."
-    else:
+
+    if not extracted_text or extracted_text.startswith("Error"):
         # Fallback structured mock if no API key
         extracted_text = (
             "INDIA FINEST ULTRA WHITE PAPER\n"
@@ -205,12 +249,13 @@ def _openrouter_explanations(req: ExplainRequest) -> Dict[str, str]:
         f"OCR TEXT:\n{req.extractedText}\n\nRULE RESULTS:\n{json.dumps(rules, ensure_ascii=True)}"
     )
     payload = json.dumps({
-        "model": os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini"),
+        "model": os.getenv("OPENROUTER_MODEL", "google/gemini-2.5-flash"),
         "messages": [
             {"role": "system", "content": "Return valid JSON only. Never use markdown fences."},
             {"role": "user", "content": prompt},
         ],
         "temperature": 0.1,
+        "max_tokens": 1500,
         "response_format": {"type": "json_object"},
     }).encode("utf-8")
     request = Request(
@@ -278,6 +323,82 @@ def explain_rules(req: ExplainRequest):
                 explanations[r.get("ruleId")] = "This rule requires a human to verify it. Please check the physical package to ensure it complies."
                 
     return explanations
+
+class ExecutiveSummaryRequest(BaseModel):
+    results: List[Any]
+    extractedText: str
+
+@app.post("/api/executive_summary")
+def generate_executive_summary(req: ExecutiveSummaryRequest):
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        return {
+            "assessment": "Mock Assessment: This package has several missing compliance items based on the Legal Metrology Act.",
+            "agentView": "Mock Agent View: Based on the missing MRP and Customer Care info, this would likely be flagged for non-compliance and a show-cause notice issued.",
+            "recommendations": [
+                "Ensure MRP is clearly printed with 'Inclusive of all taxes'",
+                "Add a valid customer care email and phone number",
+                "Ensure manufacturer address is complete with PIN code"
+            ]
+        }
+
+    import json
+    from urllib.request import Request, urlopen
+
+    rules = [
+        {
+            "ruleId": r.get("ruleId"),
+            "status": r.get("status"),
+            "title": r.get("title")
+        }
+        for r in req.results
+    ]
+
+    prompt = (
+        "You are an expert in the Indian Legal Metrology Act (Packaged Commodities Rules). "
+        "Review the following OCR extracted text and the rule compliance results.\n\n"
+        f"OCR TEXT:\n{req.extractedText}\n\n"
+        f"RULE RESULTS:\n{json.dumps(rules)}\n\n"
+        "Generate an executive summary as a JSON object with exactly these three keys:\n"
+        "1. 'assessment': A plain English summary of what is present and what is missing.\n"
+        "2. 'agentView': A simulated Government Agent's perspective on whether this package would be approved or flagged for violations.\n"
+        "3. 'recommendations': A list of strings containing actionable advice for the manufacturer to fix packaging or improve compliance.\n"
+        "Return ONLY the raw JSON object."
+    )
+
+    try:
+        payload = json.dumps({
+            "model": os.getenv("OPENROUTER_MODEL", "google/gemini-2.5-flash"),
+            "messages": [
+                {"role": "system", "content": "You are a helpful AI that strictly outputs valid JSON. Never use markdown fences."},
+                {"role": "user", "content": prompt},
+            ],
+            "temperature": 0.2,
+            "max_tokens": 1500,
+            "response_format": {"type": "json_object"},
+        }).encode("utf-8")
+        
+        request = Request(
+            "https://openrouter.ai/api/v1/chat/completions",
+            data=payload,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        with urlopen(request, timeout=45) as response:
+            response_data = json.loads(response.read().decode("utf-8"))
+        
+        content = response_data["choices"][0]["message"]["content"]
+        return json.loads(content)
+    except Exception as e:
+        print(f"Executive Summary Error: {e}")
+        return {
+            "assessment": "Error generating assessment.",
+            "agentView": "Error generating agent view.",
+            "recommendations": ["An error occurred while communicating with the AI."]
+        }
 
 @app.get("/api/health")
 def health_check():

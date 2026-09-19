@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Search, AlertOctagon, Globe2, FileCheck2, ArrowRight, Zap, TrendingDown, Scale, Lock, Info, XCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ShieldCheck, Search, AlertOctagon, Globe2, FileCheck2, ArrowRight, Zap, TrendingDown, Scale, Lock, Info, XCircle, Factory, Building2 } from 'lucide-react';
+import type { UserRole } from '../types';
+import { LoginModal } from '../components/LoginModal';
 
 interface LandingPageProps {
-  onLaunchDemo: () => void;
-  onSelectRole: (role: 'inspector' | 'manufacturer' | 'admin') => void;
+  onSelectRole: (role: 'inspector' | 'manufacturer' | 'admin', name?: string) => void;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchDemo, onSelectRole }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onSelectRole }) => {
   const [showInstructions, setShowInstructions] = useState<boolean>(false);
+  const [loginRole, setLoginRole] = useState<UserRole | null>(null);
+  const navigate = useNavigate();
   
   const problemSteps = [
     {
@@ -61,19 +65,65 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchDemo, onSelect
             Instant in-browser OCR, AST-style statutory rule verification, visual bounding-box evidence mapping, and automated legal notice generation.
           </p>
 
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            {/* Inspector Card */}
             <button
-              onClick={onLaunchDemo}
-              className="w-full sm:w-auto px-8 py-4 bg-teal-600 text-white font-bold text-base rounded-xl shadow-xl hover:bg-teal-600 transition flex items-center justify-center gap-2"
+              onClick={() => setLoginRole('inspector')}
+              className="text-left group p-6 bg-white rounded-2xl border border-slate-200 hover:border-teal-500 shadow-sm hover:shadow-xl transition-all duration-300 relative overflow-hidden"
             >
-              <span>Launch Interactive Demo</span>
-              <ArrowRight className="w-5 h-5" />
+              <div className="absolute top-0 right-0 w-32 h-32 bg-teal-50 rounded-full translate-x-16 -translate-y-16 group-hover:scale-110 transition-transform duration-500"></div>
+              <div className="relative z-10 space-y-4">
+                <div className="w-12 h-12 bg-teal-100 text-teal-700 rounded-xl flex items-center justify-center group-hover:bg-teal-600 group-hover:text-white transition-colors">
+                  <ShieldCheck className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-teal-900 mb-1">Field Inspector</h3>
+                  <p className="text-sm text-slate-500 line-clamp-2">Govt Agents: Scan packages & issue legal notices</p>
+                </div>
+                <div className="flex items-center text-teal-600 font-semibold text-sm group-hover:translate-x-1 transition-transform">
+                  Access Portal <ArrowRight className="w-4 h-4 ml-1" />
+                </div>
+              </div>
             </button>
+
+            {/* Manufacturer Card */}
             <button
-              onClick={() => onSelectRole('admin')}
-              className="w-full sm:w-auto px-6 py-4 bg-white text-slate-700 border border-slate-300 font-semibold text-base rounded-xl hover:bg-slate-50 transition"
+              onClick={() => setLoginRole('manufacturer')}
+              className="text-left group p-6 bg-white rounded-2xl border border-slate-200 hover:border-navy shadow-sm hover:shadow-xl transition-all duration-300 relative overflow-hidden"
             >
-              Explore Executive Analytics
+              <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-full translate-x-16 -translate-y-16 group-hover:scale-110 transition-transform duration-500"></div>
+              <div className="relative z-10 space-y-4">
+                <div className="w-12 h-12 bg-slate-100 text-slate-700 rounded-xl flex items-center justify-center group-hover:bg-navy group-hover:text-white transition-colors">
+                  <Factory className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-teal-900 mb-1">Manufacturer</h3>
+                  <p className="text-sm text-slate-500 line-clamp-2">Packers: Self-audit packaging compliance</p>
+                </div>
+                <div className="flex items-center text-navy font-semibold text-sm group-hover:translate-x-1 transition-transform">
+                  Access Portal <ArrowRight className="w-4 h-4 ml-1" />
+                </div>
+              </div>
+            </button>
+
+            {/* Admin Card */}
+            <button
+              onClick={() => setLoginRole('admin')}
+              className="text-left group p-6 bg-white rounded-2xl border border-slate-200 hover:border-emerald-500 shadow-sm hover:shadow-xl transition-all duration-300 relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-full translate-x-16 -translate-y-16 group-hover:scale-110 transition-transform duration-500"></div>
+              <div className="relative z-10 space-y-4">
+                <div className="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                  <Building2 className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-teal-900 mb-1">Administrator</h3>
+                  <p className="text-sm text-slate-500 line-clamp-2">Executive: View national compliance metrics</p>
+                </div>
+                <div className="flex items-center text-emerald-600 font-semibold text-sm group-hover:translate-x-1 transition-transform">
+                  Access Portal <ArrowRight className="w-4 h-4 ml-1" />
+                </div>
+              </div>
             </button>
           </div>
 
@@ -162,6 +212,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchDemo, onSelect
             </div>
           </div>
         </div>
+      )}
+
+      {loginRole && (
+        <LoginModal
+          isOpen={!!loginRole}
+          role={loginRole}
+          onClose={() => setLoginRole(null)}
+          onLogin={(name) => {
+            setLoginRole(null);
+            onSelectRole(loginRole, name);
+          }}
+        />
       )}
 
       {/* Problem Cycle Visual Section */}

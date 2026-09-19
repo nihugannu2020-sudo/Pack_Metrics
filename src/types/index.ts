@@ -1,5 +1,14 @@
 export type UserRole = 'inspector' | 'manufacturer' | 'admin';
 
+export interface AppUser {
+  id: string;
+  name: string;
+  role: UserRole;
+  organization: string;
+  lastLogin: string;
+  activityCount: number;
+}
+
 export interface BoundingBox {
   x0: number;
   y0: number;
@@ -52,13 +61,18 @@ export interface ComplianceReport {
   passCount: number;
   failCount: number;
   reviewCount: number;
-  overallStatus: 'Compliant' | 'Non-Compliant' | 'Needs Review';
+  overallStatus: 'Compliant' | 'Non-Compliant' | 'Needs Review' | 'Draft';
   submittedBy?: string;
   submittedByRole?: UserRole;
   reviewStatus?: 'draft' | 'submitted' | 'approved' | 'rejected';
   reviewedBy?: string;
   reviewedAt?: string;
   reviewNote?: string;
+  executiveSummary?: {
+    assessment: string;
+    agentView: string;
+    recommendations: string[];
+  };
 }
 
 export interface LegalNotice {

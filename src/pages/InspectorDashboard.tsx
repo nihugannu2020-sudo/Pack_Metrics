@@ -6,7 +6,9 @@ import { BoundingBoxCanvas } from '../components/BoundingBoxCanvas';
 import { NoticeModal } from '../components/NoticeModal';
 import { DB } from '../utils/db';
 import { API } from '../services/api';
-import { readFileAsDataUrl, stitchImages } from '../utils/file';
+import { readFileAsDataUrl, stitchImages, compressImage } from '../utils/file';
+import { ExecutiveSummary } from '../components/ExecutiveSummary';
+import toast from 'react-hot-toast';
 import { Upload, CheckCircle2, XCircle, AlertTriangle, FileText, Eye, Info, Sparkles, Filter, ClipboardCheck, Loader2, AlertCircle, ScanLine, Search, Send } from 'lucide-react';
 
 interface InspectorDashboardProps {
@@ -70,17 +72,21 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
       DB.saveScan(inspectorReport);
       setScanHistory(DB.getScans());
       
-      // Async fetch AI explanations
+      // Async fetch AI explanations and executive summary
       setIsExplaining(true);
-      API.getExplanations(inspectorReport).then((explanations: Record<string, string>) => {
+      Promise.all([
+        API.getExplanations(inspectorReport),
+        API.getExecutiveSummary(inspectorReport)
+      ]).then(([explanations, executiveSummary]) => {
         const updatedResults = inspectorReport.results.map(r => ({
           ...r,
           aiExplanation: explanations[r.ruleId]
         }));
-        const updatedReport = { ...inspectorReport, results: updatedResults };
+        const updatedReport = { ...inspectorReport, results: updatedResults, executiveSummary };
         setCurrentReport(updatedReport);
         DB.updateScan(updatedReport);
         setScanHistory(DB.getScans());
+        toast.success('Inspector audit completed.');
       }).catch(console.error).finally(() => setIsExplaining(false));
 
     } catch (err) {
@@ -92,6 +98,7 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
 
   const handleSaveNotice = (notice: LegalNotice) => {
     DB.saveNotice(notice);
+    toast.success('Legal Notice officially issued.');
   };
 
   const reviewManufacturerReport = (report: ComplianceReport, reviewStatus: 'approved' | 'rejected') => {
@@ -106,6 +113,11 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
     setScanHistory(updatedScans);
     setSubmittedReports(updatedScans.filter(scan => scan.reviewStatus === 'submitted' && scan.submittedByRole === 'manufacturer'));
     setCurrentReport({ ...report, reviewStatus, reviewedBy: officerName });
+    if (reviewStatus === 'approved') {
+      toast.success('Product Approved!');
+    } else {
+      toast.error('Product Rejected for additional review.');
+    }
   };
 
   const scanSubmittedReport = async (report: ComplianceReport) => {
@@ -201,7 +213,7 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
         <div className="lg:col-span-5 space-y-6">
           <div className="glass-panel p-5 transition-all duration-300 hover:shadow-md">
             <h2 className="text-base font-bold font-heading text-teal-900 mb-3 flex items-center justify-between">
-              <span>Upload Package Label</span>
+              <span>Upload Multiple Package Images</span>
               <Sparkles className="w-4 h-4 text-teal-600" />
             </h2>
 
@@ -215,7 +227,7 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
                     className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                   />
                   <Upload className="w-8 h-8 text-teal-600 mx-auto mb-2" />
-                  <h4 className="font-bold text-teal-900 text-sm">Upload Package Photo</h4>
+                  <h4 className="font-bold text-teal-900 text-sm">Upload Package Image(s)</h4>
                   <p className="text-xs text-slate-500 mt-1">PNG, JPG, WEBP formats up to 10MB</p>
                 </div>
 
@@ -385,7 +397,7 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
                               </div>
                               
                               {(result.matchedText || result.warning || result.guidanceNote || isExplaining || result.aiExplanation) && (
-                                <details className="mt-3 group">
+                                <details className="mt-2 group" open>
                                   <summary className="cursor-pointer font-semibold text-slate-500 text-[11px] list-none flex items-center gap-1.5 transition-colors group-hover:text-indigo-600">
                                     <Sparkles className="w-3 h-3 text-indigo-500" />
                                     <span>AI Explanation & Details</span>
@@ -445,6 +457,9 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
                 </span>
               </div>
             </div>
+          )}
+          {currentReport && !isScanning && (
+            <ExecutiveSummary summary={currentReport.executiveSummary} />
           )}
         </div>
       </div>

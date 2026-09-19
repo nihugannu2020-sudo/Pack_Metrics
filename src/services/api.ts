@@ -26,6 +26,15 @@ export const API = {
     return res.json();
   },
 
+  async getExecutiveSummary(report: ComplianceReport): Promise<{assessment: string, agentView: string, recommendations: string[]}> {
+    const res = await fetch(`${API_URL}/executive_summary`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ results: report.results, extractedText: report.extractedText }),
+    });
+    return res.json();
+  },
+
   async saveScan(scan: ComplianceReport): Promise<ComplianceReport> {
     const res = await fetch(`${API_URL}/scans`, {
       method: 'POST',

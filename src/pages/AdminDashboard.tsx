@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import type { ComplianceReport, LegalNotice } from '../types';
+import type { ComplianceReport, LegalNotice, AppUser } from '../types';
+import { DB } from '../utils/db';
 import { API } from '../services/api';
 import { performOCR } from '../utils/ocr';
 import { validateRuleEngine } from '../utils/ruleEngine';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell
 } from 'recharts';
-import { BarChart3, ShieldCheck, AlertTriangle, FileText, Award, Activity, Eye, ScanLine } from 'lucide-react';
+import { BarChart3, ShieldCheck, AlertTriangle, FileText, Award, Activity, Eye, ScanLine, Users } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export const AdminDashboard: React.FC = () => {
   const [scans, setScans] = useState<ComplianceReport[]>([]);
   const [notices, setNotices] = useState<LegalNotice[]>([]);
+  const [users, setUsers] = useState<AppUser[]>([]);
   const [selectedReport, setSelectedReport] = useState<ComplianceReport | null>(null);
   const [scannedReport, setScannedReport] = useState<ComplianceReport | null>(null);
   const [isScanningReport, setIsScanningReport] = useState(false);
@@ -20,10 +23,14 @@ export const AdminDashboard: React.FC = () => {
   useEffect(() => {
     API.getScans().then(setScans).catch(console.error);
     API.getNotices().then(setNotices).catch(console.error);
+    setUsers(DB.getUsers());
   }, []);
 
   const totalScans = scans.length;
-  const officerReports = scans.filter(scan => scan.submittedByRole !== 'manufacturer');
+  const officerReports = scans.filter(scan => 
+    scan.submittedByRole !== 'manufacturer' || 
+    (scan.submittedByRole === 'manufacturer' && (scan.reviewStatus === 'approved' || scan.reviewStatus === 'rejected'))
+  );
   const compliantScans = scans.filter(s => s.overallStatus === 'Compliant').length;
   const complianceRate = totalScans > 0 ? Math.round((compliantScans / totalScans) * 100) : 0;
 
@@ -63,9 +70,11 @@ export const AdminDashboard: React.FC = () => {
       setScannedReport(updatedReport);
       setScanProgress(100);
       setScanStatus('Executive scan complete');
+      toast.success('Executive scan complete');
     } catch (error) {
       console.error('Executive report scan error:', error);
       setScanStatus('Unable to scan the attached image');
+      toast.error('Unable to scan the attached image');
     } finally {
       setIsScanningReport(false);
     }
@@ -310,6 +319,60 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-bold font-heading text-teal-900 text-lg flex items-center gap-2">
+              <Users className="w-5 h-5 text-teal-600" />
+              <span>User Directory & Activity Logs</span>
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Active stakeholders logged into the system.
+            </p>
+          </div>
+          <span className="text-xs text-slate-500 font-mono">{users.length} Users Registered</span>
+        </div>
+
+        {users.length === 0 ? (
+          <div className="p-8 text-center bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500">
+            No active users found.
+          </div>
+        ) : (
+          <div className="border border-slate-200 rounded-xl overflow-hidden">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider">
+                <tr>
+                  <th className="px-4 py-3 font-semibold">Name</th>
+                  <th className="px-4 py-3 font-semibold">Role</th>
+                  <th className="px-4 py-3 font-semibold">Organization / ID</th>
+                  <th className="px-4 py-3 font-semibold text-right">Logins</th>
+                  <th className="px-4 py-3 font-semibold text-right">Last Active</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {users.map(user => (
+                  <tr key={user.id} className="hover:bg-slate-50/50 transition">
+                    <td className="px-4 py-3 font-semibold text-teal-900">{user.name}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded-full font-semibold text-[10px] ${
+                        user.role === 'admin' ? 'bg-emerald-100 text-emerald-800' :
+                        user.role === 'inspector' ? 'bg-teal-100 text-teal-800' :
+                        'bg-blue-100 text-blue-800'
+                      }`}>
+                        {user.role}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">{user.organization}</td>
+                    <td className="px-4 py-3 text-right font-mono text-slate-600">{user.activityCount}</td>
+                    <td className="px-4 py-3 text-right text-slate-500">{new Date(user.lastLogin).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

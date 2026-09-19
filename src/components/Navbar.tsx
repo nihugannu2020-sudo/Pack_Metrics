@@ -1,22 +1,22 @@
 import React from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import type { UserRole } from '../types';
 import { ShieldCheck, UserCheck, BookOpen, BarChart3, User, RefreshCw } from 'lucide-react';
 
 interface NavbarProps {
   currentRole: UserRole;
   userName: string;
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
   onOpenRolePicker: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   currentRole,
   userName,
-  activeTab,
-  setActiveTab,
   onOpenRolePicker,
 }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const currentPath = location.pathname;
   const roleBadges: Record<UserRole, { label: string; bg: string; text: string }> = {
     inspector: { label: 'Field Inspector', bg: 'bg-teal-600 text-white', text: 'Legal Metrology Inspectorate' },
     manufacturer: { label: 'Manufacturer', bg: 'bg-navy text-white', text: 'Packer & Industry Portal' },
@@ -39,9 +39,9 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between min-h-16 py-3 gap-4">
           {/* Brand Logo & Govt Header */}
-          <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab('landing')}>
-            <div className="w-9 h-9 bg-slate-100 rounded-lg flex items-center justify-center border border-slate-200">
-              <ShieldCheck className="w-5 h-5 text-teal-600" />
+          <Link to="/" className="flex items-center space-x-3 cursor-pointer">
+            <div className="w-9 h-9 flex items-center justify-center">
+              <img src="/logo.png" alt="PackMetrics Logo" className="w-9 h-9" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -51,17 +51,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                 Compliance workspace
               </p>
             </div>
-          </div>
+          </Link>
 
           {/* Navigation Links */}
             <nav className="hidden md:flex space-x-1 ml-auto mr-4">
             {visibleNavItems.map(item => {
               const Icon = item.icon;
-              const isActive = activeTab === item.id;
+              // determine path from id
+              const path = item.id === 'rules' ? '/rules' : `/${item.id}`;
+              const isActive = currentPath === path;
               return (
-                <button
+                <Link
                   key={item.id}
-                  onClick={() => setActiveTab(item.id)}
+                  to={path}
                   className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-300 ${
                     isActive
                       ? 'bg-orange-50 text-orange-600 shadow-sm'
@@ -70,7 +72,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 >
                   <Icon className="w-4 h-4" />
                   <span>{item.label}</span>
-                </button>
+                </Link>
               );
             })}
           </nav>
@@ -105,18 +107,19 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="md:hidden bg-white border-t border-slate-200 px-2 py-1.5 flex justify-around">
         {visibleNavItems.map(item => {
           const Icon = item.icon;
-          const isActive = activeTab === item.id;
+          const path = item.id === 'rules' ? '/rules' : `/${item.id}`;
+          const isActive = currentPath === path;
           return (
-            <button
+            <Link
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              to={path}
               className={`flex flex-col items-center py-1 px-2 rounded text-[10px] ${
                 isActive ? 'text-blue-700 font-semibold' : 'text-slate-500'
               }`}
             >
               <Icon className="w-4 h-4 mb-0.5" />
               <span>{item.label.split(' ')[0]}</span>
-            </button>
+            </Link>
           );
         })}
       </div>
