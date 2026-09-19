@@ -378,7 +378,7 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {selectedReport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-950/70 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-slate-200">
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
               <div>

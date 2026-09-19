@@ -35,7 +35,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const visibleNavItems = navItems.filter(item => item.role === 'all' || item.role === currentRole);
 
   return (
-    <header className="sticky top-0 z-40 bg-white/70 backdrop-blur-md border-b border-white/20 shadow-sm transition-all duration-300">
+    <header className="sticky top-0 z-[60] bg-white/70 backdrop-blur-md border-b border-white/20 shadow-sm transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between min-h-16 py-3 gap-4">
           {/* Brand Logo & Govt Header */}
