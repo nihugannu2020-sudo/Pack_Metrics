@@ -23,6 +23,7 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({ us
   const [ocrProgress, setOcrProgress] = useState<number>(0);
   const [ocrStatusText, setOcrStatusText] = useState<string>('');
   const [customFilePreviews, setCustomFilePreviews] = useState<string[]>([]);
+  const [mergedCustomImage, setMergedCustomImage] = useState<string | null>(null);
   const [customProductName, setCustomProductName] = useState<string>('');
   const [activeView, setActiveView] = useState<'dashboard' | 'upload' | 'report'>('dashboard');
   const reportSectionRef = useRef<HTMLDivElement>(null);
@@ -126,18 +127,23 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({ us
     const mergedImageUrl = await stitchImages(imageUrls);
     
     setCustomFilePreviews(imageUrls);
+    setMergedCustomImage(mergedImageUrl);
+  };
+
+  const handleRunAiScan = async () => {
+    if (!mergedCustomImage) return;
     setIsScanning(true);
 
     try {
-      const ocrResult = await performOCR(mergedImageUrl, undefined, (progress, status) => {
+      const ocrResult = await performOCR(mergedCustomImage, undefined, (progress, status) => {
         setOcrProgress(progress);
         setOcrStatusText(status);
       });
-      const report = validateRuleEngine(ocrResult.text, ocrResult.words, { isImported: false, imageUrl: mergedImageUrl });
+      const report = validateRuleEngine(ocrResult.text, ocrResult.words, { isImported: false, imageUrl: mergedCustomImage });
       
       // Compress the images heavily to store them safely in localStorage
-      const compressedImageUrls = await Promise.all(imageUrls.map(url => compressImage(url, 800, 0.4)));
-      const compressedMergedImageUrl = await compressImage(mergedImageUrl, 800, 0.4);
+      const compressedImageUrls = await Promise.all(customFilePreviews.map(url => compressImage(url, 800, 0.4)));
+      const compressedMergedImageUrl = await compressImage(mergedCustomImage, 800, 0.4);
       
       // Preserve the draft ID so it updates the existing folder instead of creating a new one
       if (currentReport && currentReport.id) {
@@ -151,8 +157,11 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({ us
       saveDraftReport(report);
       setActiveView('report');
       setCustomProductName(''); // Reset after upload
+      setMergedCustomImage(null);
+      setCustomFilePreviews([]);
     } catch (err) {
       console.error('Manufacturer upload error:', err);
+      toast.error('Scan failed. Please check if the backend is running.');
     } finally {
       setIsScanning(false);
     }
@@ -203,10 +212,20 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({ us
           )}
 
           {customFilePreviews.length > 0 && !isScanning && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
-              {customFilePreviews.map((preview, index) => (
-                <img key={preview} src={preview} alt={`Uploaded label ${index + 1}`} className="h-32 w-full rounded-lg border border-slate-200 object-cover shadow-sm" />
-              ))}
+            <div className="space-y-4 mt-6">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {customFilePreviews.map((preview, index) => (
+                  <img key={preview} src={preview} alt={`Uploaded label ${index + 1}`} className="h-32 w-full rounded-lg border border-slate-200 object-cover shadow-sm" />
+                ))}
+              </div>
+              <button
+                onClick={handleRunAiScan}
+                disabled={isScanning}
+                className="w-full bg-teal-600 hover:bg-teal-700 disabled:bg-slate-400 text-white font-bold py-3 px-4 rounded-xl shadow-lg hover:shadow-teal-600/30 transition-all flex items-center justify-center gap-2"
+              >
+                <ScanLine className="w-5 h-5" />
+                Run AI Scan
+              </button>
             </div>
           )}
         </div>

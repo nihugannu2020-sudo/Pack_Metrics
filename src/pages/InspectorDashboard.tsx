@@ -32,6 +32,7 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
   const [reviewScanStatus, setReviewScanStatus] = useState<string>('');
   const [isNoticeModalOpen, setIsNoticeModalOpen] = useState<boolean>(false);
   const [customFilePreviews, setCustomFilePreviews] = useState<string[]>([]);
+  const [mergedCustomImage, setMergedCustomImage] = useState<string | null>(null);
   const reportSectionRef = useRef<HTMLDivElement>(null);
 
   // Load history on mount
@@ -49,19 +50,24 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
     const mergedImageUrl = await stitchImages(imageUrls);
     
     setCustomFilePreviews(imageUrls);
+    setMergedCustomImage(mergedImageUrl);
+  };
+
+  const handleRunAiScan = async () => {
+    if (!mergedCustomImage) return;
     setIsScanning(true);
 
     try {
-      const ocrResult = await performOCR(mergedImageUrl, undefined, (progress, status) => {
+      const ocrResult = await performOCR(mergedCustomImage, undefined, (progress, status) => {
         setOcrProgress(progress);
         setOcrStatusText(status);
       });
 
       const report = validateRuleEngine(ocrResult.text, ocrResult.words, {
         isImported,
-        imageUrl: mergedImageUrl,
+        imageUrl: mergedCustomImage,
       });
-      report.imageUrls = imageUrls;
+      report.imageUrls = customFilePreviews;
 
       const inspectorReport: ComplianceReport = {
         ...report,
@@ -87,10 +93,14 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
         DB.updateScan(updatedReport);
         setScanHistory(DB.getScans());
         toast.success('Inspector audit completed.');
-      }).catch(console.error).finally(() => setIsExplaining(false));
+      }).catch((err) => {
+        console.error(err);
+        toast.error('AI Explanation failed.');
+      }).finally(() => setIsExplaining(false));
 
     } catch (err) {
       console.error('Custom file scan error:', err);
+      toast.error('Scan failed. Please check if the backend is running.');
     } finally {
       setIsScanning(false);
     }
@@ -232,10 +242,29 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
                 </div>
 
                 {customFilePreviews.length > 0 && (
-                  <div className="grid grid-cols-2 gap-2">
-                    {customFilePreviews.map((preview, index) => (
-                      <img key={preview} src={preview} alt={`Uploaded custom label ${index + 1}`} className="h-24 w-full rounded-lg border border-slate-200 object-contain bg-slate-900" />
-                    ))}
+                  <div className="space-y-4 mt-4">
+                    <div className="grid grid-cols-2 gap-2">
+                      {customFilePreviews.map((preview, index) => (
+                        <img key={preview} src={preview} alt={`Uploaded custom label ${index + 1}`} className="h-24 w-full rounded-lg border border-slate-200 object-contain bg-slate-900" />
+                      ))}
+                    </div>
+                    <button
+                      onClick={handleRunAiScan}
+                      disabled={isScanning}
+                      className="w-full bg-teal-600 hover:bg-teal-700 disabled:bg-slate-400 text-white font-bold py-3 px-4 rounded-xl shadow-lg hover:shadow-teal-600/30 transition-all flex items-center justify-center gap-2"
+                    >
+                      {isScanning ? (
+                        <>
+                          <ScanLine className="w-5 h-5 animate-spin" />
+                          Running AI Scan...
+                        </>
+                      ) : (
+                        <>
+                          <ScanLine className="w-5 h-5" />
+                          Run AI Scan
+                        </>
+                      )}
+                    </button>
                   </div>
                 )}
             </div>
