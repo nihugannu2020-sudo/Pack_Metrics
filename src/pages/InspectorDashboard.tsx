@@ -58,16 +58,19 @@ export const InspectorDashboard: React.FC<InspectorDashboardProps> = ({ officerN
     setIsScanning(true);
 
     try {
-      const ocrResult = await performOCR(mergedCustomImage, undefined, (progress, status) => {
+      const compressedMergedImageUrl = await compressImage(mergedCustomImage, 1200, 0.6);
+      
+      const ocrResult = await performOCR(compressedMergedImageUrl, undefined, (progress, status) => {
         setOcrProgress(progress);
         setOcrStatusText(status);
       });
 
       const report = validateRuleEngine(ocrResult.text, ocrResult.words, {
         isImported,
-        imageUrl: mergedCustomImage,
+        imageUrl: compressedMergedImageUrl,
       });
-      report.imageUrls = customFilePreviews;
+      const compressedImageUrls = await Promise.all(customFilePreviews.map(url => compressImage(url, 800, 0.4)));
+      report.imageUrls = compressedImageUrls;
 
       const inspectorReport: ComplianceReport = {
         ...report,

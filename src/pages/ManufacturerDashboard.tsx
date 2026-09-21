@@ -135,15 +135,17 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({ us
     setIsScanning(true);
 
     try {
-      const ocrResult = await performOCR(mergedCustomImage, undefined, (progress, status) => {
+      // Compress the image before sending to the backend to avoid payload size limits and timeouts
+      const compressedMergedImageUrl = await compressImage(mergedCustomImage, 1200, 0.6);
+      
+      const ocrResult = await performOCR(compressedMergedImageUrl, undefined, (progress, status) => {
         setOcrProgress(progress);
         setOcrStatusText(status);
       });
-      const report = validateRuleEngine(ocrResult.text, ocrResult.words, { isImported: false, imageUrl: mergedCustomImage });
+      const report = validateRuleEngine(ocrResult.text, ocrResult.words, { isImported: false, imageUrl: compressedMergedImageUrl });
       
-      // Compress the images heavily to store them safely in localStorage
+      // Compress individual images heavily for localStorage
       const compressedImageUrls = await Promise.all(customFilePreviews.map(url => compressImage(url, 800, 0.4)));
-      const compressedMergedImageUrl = await compressImage(mergedCustomImage, 800, 0.4);
       
       // Preserve the draft ID so it updates the existing folder instead of creating a new one
       if (currentReport && currentReport.id) {
